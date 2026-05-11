@@ -1,10 +1,36 @@
 import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
+import { authClient } from "./lib/auth-client";
+import LoginPage from "./pages/LoginPage";
+import Navbar from "./components/Navbar";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function Home() {
+  const { data: session } = authClient.useSession();
+
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold">Helpdesk</h1>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar userName={session?.user.name ?? ""} />
+      <div className="p-8">
+        <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+      </div>
     </div>
   );
 }
@@ -115,7 +141,15 @@ function HealthPage() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/health" element={<HealthPage />} />
     </Routes>
   );
