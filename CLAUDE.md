@@ -102,6 +102,7 @@ Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variab
 - Components live in `client/src/components/ui/`
 - Currently installed: `button`, `input`, `label`, `card`, `badge`, `alert`
 - The `form` component is **not available** in `base-nova` — use `Label` + `Input` directly with react-hook-form `register`
+- The `Button` component does **not** support `asChild` in `base-nova` — use a plain `<Link>` with Tailwind classes for nav links instead
 - Path alias `@/*` → `src/*` is configured in both `tsconfig.json` and `vite.config.ts`
 
 ## UI Conventions
@@ -115,7 +116,16 @@ Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variab
 
 ## Authentication
 
-Better Auth is fully wired up. Sign-up is **disabled** — only admins create users via the seed script or future admin UI.
+Better Auth is fully wired up. Sign-up is **disabled** — only admins create users via seed scripts or the future admin UI.
+
+**Seeded accounts:**
+
+| Email | Password | Role |
+|---|---|---|
+| _(set via `SEED_ADMIN_EMAIL` env var)_ | `SEED_ADMIN_PASSWORD` | `admin` |
+| `agent@example.com` | `password123` | `agent` |
+
+To create/recreate a user, write a one-off script under `server/prisma/` using a bare `betterAuth` instance (no plugins, `disableSignUp` omitted) so sign-up is permitted, then delete the script after running.
 
 ### Server (`server/src/lib/auth.ts`)
 
@@ -152,6 +162,19 @@ Better Auth is fully wired up. Sign-up is **disabled** — only admins create us
 - Renders children otherwise.
 
 Apply role gating inside the protected page (check `session.user.role`) or add a separate `<AdminRoute>` wrapper for admin-only pages.
+
+`<AdminRoute>` is already implemented in `App.tsx` — it redirects unauthenticated users to `/login` and non-admins to `/`.
+
+**Typing `role` on the client:** The client tsconfig only covers `client/src`, so `inferAdditionalFields<typeof auth>()` cannot be used (would require importing from the server). Cast instead:
+
+```ts
+const role = (session?.user as { role?: "admin" | "agent" } | undefined)?.role;
+```
+
+### Users page (`client/src/pages/UsersPage.tsx`)
+
+- Route: `/users` — wrapped in `<AdminRoute>`, redirects agents to `/`.
+- Navbar shows a "Users" link next to the "Helpdesk" logo, visible to admins only (role check via type cast).
 
 ### Login page (`client/src/pages/LoginPage.tsx`)
 

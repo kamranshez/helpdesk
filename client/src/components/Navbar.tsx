@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
 
@@ -6,8 +6,12 @@ interface NavbarProps {
   userName: string;
 }
 
+type SessionUser = { role?: "admin" | "agent" };
+
 export default function Navbar({ userName }: NavbarProps) {
   const navigate = useNavigate();
+  const { data: session } = authClient.useSession();
+  const role = (session?.user as SessionUser | undefined)?.role;
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -16,7 +20,14 @@ export default function Navbar({ userName }: NavbarProps) {
 
   return (
     <nav className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
-      <span className="text-lg font-semibold text-foreground">Helpdesk</span>
+      <div className="flex items-center gap-6">
+        <span className="text-lg font-semibold text-foreground">Helpdesk</span>
+        {role === "admin" && (
+          <Link to="/users" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Users
+          </Link>
+        )}
+      </div>
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground">{userName}</span>
         <Button variant="ghost" size="sm" onClick={handleSignOut}>

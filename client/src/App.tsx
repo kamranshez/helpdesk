@@ -2,10 +2,28 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router";
 import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
+import UsersPage from "./pages/UsersPage";
 import Navbar from "./components/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) return <Navigate to="/login" replace />;
+  if (session.user.role !== "admin") return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = authClient.useSession();
@@ -136,6 +154,14 @@ export default function App() {
           <ProtectedRoute>
             <Home />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <AdminRoute>
+            <UsersPage />
+          </AdminRoute>
         }
       />
       <Route path="/health" element={<HealthPage />} />
