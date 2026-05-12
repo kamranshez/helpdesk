@@ -22,10 +22,10 @@ helpdesk/
 
 | Layer       | Technology                                      |
 |-------------|-------------------------------------------------|
-| Frontend    | React 19, TypeScript, Tailwind CSS v4, React Router v7, Vite 6 |
+| Frontend    | React 19, TypeScript, Tailwind CSS v4, React Router v7, Vite 6, shadcn/ui |
 | Backend     | Node/Bun, Express v5, TypeScript                |
 | Database    | PostgreSQL via Prisma ORM                       |
-| Auth        | Session-based (database sessions)               |
+| Auth        | Session-based (database sessions) via Better Auth |
 | AI          | Claude API (Anthropic) — classification, summaries, suggested replies |
 | Email       | SendGrid or Mailgun (inbound webhook + outbound) |
 | Deployment  | Docker + cloud provider (AWS / Railway / Fly.io) |
@@ -93,6 +93,80 @@ Always resolve before querying — IDs are not guessable.
 - Express v5 has native async error propagation — no need for `express-async-errors` wrapper.
 - Prisma migrations live in `server/prisma/migrations/`.
 - `.env` at `server/.env` for secrets (never commit).
+
+## shadcn/ui
+
+Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variables enabled, icon library: `lucide`.
+
+- Add components: `npx shadcn@latest add <component>` (run from project root or `client/`)
+- Components live in `client/src/components/ui/`
+- Currently installed: `button`, `input`, `label`, `card`, `badge`, `alert`
+- The `form` component is **not available** in `base-nova` — use `Label` + `Input` directly with react-hook-form `register`
+- Path alias `@/*` → `src/*` is configured in both `tsconfig.json` and `vite.config.ts`
+
+## UI Conventions
+
+- Use shadcn CSS variable classes everywhere — **never** raw Tailwind color classes like `text-gray-500`. Use `text-muted-foreground`, `bg-background`, `text-destructive`, `border-border`, etc.
+- Loading spinners: `<Loader2 className="animate-spin" />` from `lucide-react`
+- API-level errors: `<Alert variant="destructive">` with `<AlertCircle>` icon
+- Field-level validation errors: `<p className="text-xs text-destructive">`
+- Page layouts: `min-h-screen bg-muted` as the outer wrapper
+- Chrome autofill override is set globally in `src/index.css` — no per-input fix needed
+
+## Authentication
+
+Better Auth is fully wired up. Sign-up is **disabled** — only admins create users via the seed script or future admin UI.
+
+### Server (`server/src/lib/auth.ts`)
+
+- Prisma adapter with PostgreSQL provider.
+- `emailAndPassword` enabled; `disableSignUp: true`.
+- Custom `role` field (`"admin" | "agent"`) added to the `user` model via `additionalFields`; defaults to `"agent"`, never accepted from client input.
+- `customSession` plugin re-fetches the role from the DB on every session so role changes take effect immediately without forcing re-login.
+- `TRUSTED_ORIGIN` env var (comma-separated) — required; the auth handler rejects cross-origin requests from unlisted origins.
+
+### Server mounting (`server/src/app.ts`)
+
+- Auth handler: `app.all("/api/auth/{*any}", toNodeHandler(auth))` — **must be registered before `express.json()`** (Better Auth reads the raw body itself).
+- CORS: `credentials: true`, origin from `CLIENT_URL` env var (default `http://localhost:5173`).
+
+### Client (`client/src/lib/auth-client.ts`)
+
+- `createAuthClient()` from `better-auth/react` — no explicit `baseURL`; relies on Vite's dev-server proxy forwarding `/api/*` to the Express server.
+- Exported as `authClient`; import this everywhere auth is needed — never call `/api/auth/*` directly.
+
+### Key client APIs
+
+| Usage | Code |
+|---|---|
+| Read session / loading state | `const { data: session, isPending } = authClient.useSession()` |
+| Sign in | `authClient.signIn.email({ email, password })` |
+| Sign out | `authClient.signOut()` |
+| Access role | `session?.user.role` → `"admin"` or `"agent"` |
+
+### Route protection (`client/src/App.tsx`)
+
+`<ProtectedRoute>` wraps any route that requires a session. It uses `authClient.useSession()` and:
+- Shows a spinner while `isPending` is true.
+- Redirects to `/login` if `session` is `null`.
+- Renders children otherwise.
+
+Apply role gating inside the protected page (check `session.user.role`) or add a separate `<AdminRoute>` wrapper for admin-only pages.
+
+### Login page (`client/src/pages/LoginPage.tsx`)
+
+- Validates with react-hook-form + zod (`email` + `password` fields).
+- Calls `authClient.signIn.email()` on submit; maps auth errors to `errors.root` shown in a destructive `<Alert>`.
+- Redirects to `/` on success; also redirects automatically if already logged in (via `useEffect` watching `session`).
+
+### Environment variables (server)
+
+| Variable | Purpose |
+|---|---|
+| `TRUSTED_ORIGIN` | Comma-separated allowed origins for Better Auth CORS |
+| `CLIENT_URL` | Express CORS `origin` value (default `http://localhost:5173`) |
+| `BETTER_AUTH_SECRET` | Secret used to sign session tokens (required in production) |
+| `DATABASE_URL` | PostgreSQL connection string used by Prisma |
 
 ## Notes
 

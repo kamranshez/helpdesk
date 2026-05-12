@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { authClient } from "../lib/auth-client";
+import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
   userName: string;
@@ -14,16 +15,13 @@ export default function Navbar({ userName }: NavbarProps) {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-      <span className="text-lg font-semibold text-gray-900">Helpdesk</span>
+    <nav className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
+      <span className="text-lg font-semibold text-foreground">Helpdesk</span>
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600">{userName}</span>
-        <button
-          onClick={handleSignOut}
-          className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
-        >
+        <span className="text-sm text-muted-foreground">{userName}</span>
+        <Button variant="ghost" size="sm" onClick={handleSignOut}>
           Sign out
-        </button>
+        </Button>
       </div>
     </nav>
   );
