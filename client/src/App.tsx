@@ -20,7 +20,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!session) return <Navigate to="/login" replace />;
-  if (session.user.role !== "admin") return <Navigate to="/" replace />;
+  if ((session.user as { role?: string }).role !== "admin") return <Navigate to="/" replace />;
 
   return <>{children}</>;
 }
