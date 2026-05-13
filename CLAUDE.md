@@ -14,6 +14,8 @@ AI-powered ticket management system for support teams. Agents receive tickets (v
 helpdesk/
 ├── client/          # React + TypeScript SPA (Vite, Tailwind CSS v4, React Router v7)
 ├── server/          # Express v5 + TypeScript API (Bun runtime)
+├── e2e/             # Playwright E2E tests (package.json sets "type": "commonjs")
+├── playwright.config.ts
 ├── package.json     # Bun workspaces root
 └── bun.lock
 ```
@@ -42,6 +44,9 @@ bun run dev:client
 
 # Type-check everything
 bun typecheck
+
+# Run E2E tests (starts both servers automatically)
+bun test:e2e
 ```
 
 Server hot-reloads via `bun --hot`. Client dev server via Vite.
@@ -190,6 +195,20 @@ const role = (session?.user as { role?: "admin" | "agent" } | undefined)?.role;
 | `CLIENT_URL` | Express CORS `origin` value (default `http://localhost:5173`) |
 | `BETTER_AUTH_SECRET` | Secret used to sign session tokens (required in production) |
 | `DATABASE_URL` | PostgreSQL connection string used by Prisma |
+
+## E2E Testing (Playwright)
+
+- Config: `playwright.config.ts` at root — single Chromium project, `workers: 1`.
+- Test files go in `e2e/` — the directory has its own `package.json` with `"type": "commonjs"` because Playwright compiles setup files to CJS, which conflicts with the root `"type": "module"`.
+- **Separate test database:** `helpdesk_test` (never touches the dev `helpdesk` DB).
+- `e2e/global-setup.ts` runs before any test: creates `helpdesk_test` if missing, runs `prisma migrate deploy`, seeds two test users.
+- Test env vars live in `server/.env.test` (safe to commit — no production secrets). Test credentials: `e2e-admin@test.local` / `E2eAdminPass!1` (admin) and `e2e-agent@test.local` / `E2eAgentPass!1` (agent).
+- The server webServer in `playwright.config.ts` injects `DATABASE_URL` pointing to `helpdesk_test` — dotenv won't override it since it respects pre-set env vars.
+- Password hashing in global-setup uses `node:crypto scrypt` with the exact same parameters as Better Auth (`N:16384, r:16, p:1, dkLen:64`, format: `salt:hex(key)`).
+
+## Security
+
+- Rate limiting (`express-rate-limit`) on `/api/auth/sign-in`: **production only** (`NODE_ENV === "production"`). Disabled in dev and test to avoid friction.
 
 ## Notes
 
