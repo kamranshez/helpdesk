@@ -198,13 +198,14 @@ const role = (session?.user as { role?: "admin" | "agent" } | undefined)?.role;
 
 ## E2E Testing (Playwright)
 
-- Config: `playwright.config.ts` at root — single Chromium project, `workers: 1`.
-- Test files go in `e2e/` — the directory has its own `package.json` with `"type": "commonjs"` because Playwright compiles setup files to CJS, which conflicts with the root `"type": "module"`.
-- **Separate test database:** `helpdesk_test` (never touches the dev `helpdesk` DB).
-- `e2e/global-setup.ts` runs before any test: creates `helpdesk_test` if missing, runs `prisma migrate deploy`, seeds two test users.
-- Test env vars live in `server/.env.test` (safe to commit — no production secrets). Test credentials: `e2e-admin@test.local` / `E2eAdminPass!1` (admin) and `e2e-agent@test.local` / `E2eAgentPass!1` (agent).
-- The server webServer in `playwright.config.ts` injects `DATABASE_URL` pointing to `helpdesk_test` — dotenv won't override it since it respects pre-set env vars.
-- Password hashing in global-setup uses `node:crypto scrypt` with the exact same parameters as Better Auth (`N:16384, r:16, p:1, dkLen:64`, format: `salt:hex(key)`).
+Use the **`playwright-e2e-writer` agent** for all Playwright test work — writing new tests, expanding coverage, or fixing flaky tests. Do not write E2E tests inline; always delegate to this agent.
+
+**When to invoke it:**
+- After completing any user-facing feature (page, form, flow)
+- When the user explicitly asks for E2E tests
+- When adding role-based access to a route (verify redirect behaviour)
+
+Run tests with: `bun test:e2e`
 
 ## Security
 
