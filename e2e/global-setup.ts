@@ -1,6 +1,5 @@
 import { execSync } from 'node:child_process';
 import { randomUUID, scrypt, randomBytes } from 'node:crypto';
-import { promisify } from 'node:util';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { Client, Pool } from 'pg';
@@ -29,16 +28,20 @@ loadEnvFile(path.join(ROOT_DIR, 'server', '.env.test'));
 // Password hashing — replicates @better-auth/utils/password exactly.
 // Format: `${saltHex}:${keyHex}`, scrypt(N:16384, r:16, p:1, dkLen:64)
 // ---------------------------------------------------------------------------
-const scryptAsync = promisify(scrypt);
-
 async function hashBetterAuthPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
-  const key = (await scryptAsync(password.normalize('NFKC'), salt, 64, {
-    N: 16384,
-    r: 16,
-    p: 1,
-    maxmem: 128 * 16384 * 16 * 2,
-  })) as Buffer;
+  const key = await new Promise<Buffer>((resolve, reject) => {
+    scrypt(
+      password.normalize('NFKC'),
+      salt,
+      64,
+      { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 },
+      (err, derivedKey) => {
+        if (err) reject(err);
+        else resolve(derivedKey);
+      }
+    );
+  });
   return `${salt}:${key.toString('hex')}`;
 }
 
