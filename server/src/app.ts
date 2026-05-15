@@ -6,6 +6,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import { prisma } from "./lib/db.js";
 import { requireAuth } from "./middleware/auth.js";
+import usersRouter from "./routes/users.js";
 
 const app = express();
 
@@ -35,5 +36,7 @@ app.get("/api/health", async (_req, res) => {
 
 // All /api routes below this line require a valid session
 app.use("/api", requireAuth);
+
+app.use("/api/users", usersRouter);
 
 export default app;
