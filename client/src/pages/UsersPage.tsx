@@ -5,7 +5,8 @@ import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
 
 type User = {
   id: string;
@@ -33,12 +34,6 @@ export default function UsersPage() {
       <div className="p-8 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-foreground mb-6">Users</h1>
 
-        {loading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-muted-foreground" size={32} />
-          </div>
-        )}
-
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -46,7 +41,35 @@ export default function UsersPage() {
           </Alert>
         )}
 
-        {!loading && !error && (
+        {loading ? (
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Name</th>
+                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
+                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
+                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border last:border-0">
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-48" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        ) : !error && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-medium text-muted-foreground">
