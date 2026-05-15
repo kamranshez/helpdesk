@@ -24,7 +24,7 @@ helpdesk/
 
 | Layer       | Technology                                      |
 |-------------|-------------------------------------------------|
-| Frontend    | React 19, TypeScript, Tailwind CSS v4, React Router v7, Vite 6, shadcn/ui |
+| Frontend    | React 19, TypeScript, Tailwind CSS v4, React Router v7, Vite 6, shadcn/ui, Axios, TanStack Query |
 | Backend     | Node/Bun, Express v5, TypeScript                |
 | Database    | PostgreSQL via Prisma ORM                       |
 | Auth        | Session-based (database sessions) via Better Auth |
@@ -118,6 +118,27 @@ Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variab
 - Field-level validation errors: `<p className="text-xs text-destructive">`
 - Page layouts: `min-h-screen bg-muted` as the outer wrapper
 - Chrome autofill override is set globally in `src/index.css` — no per-input fix needed
+
+## Data Fetching
+
+- **Always use Axios** for HTTP requests — never the native `fetch` API.
+- **Always use TanStack Query** (`useQuery`, `useMutation`) for server state in components — never `useEffect` + `useState` for fetching.
+- `QueryClientProvider` is set up in `client/src/main.tsx` — no additional setup needed.
+- Extract the fetcher into a plain `async` function above the component and pass it to `queryFn`.
+- Use `withCredentials: true` on all Axios calls so session cookies are sent.
+- Access `isLoading`, `error`, and `data` from the query result; `error` is typed as `Error | null`.
+
+```ts
+async function fetchUsers(): Promise<User[]> {
+  const { data } = await axios.get<{ users: User[] }>("/api/users", { withCredentials: true });
+  return data.users;
+}
+
+const { data: users = [], isLoading, error } = useQuery({
+  queryKey: ["users"],
+  queryFn: fetchUsers,
+});
+```
 
 ## Authentication
 

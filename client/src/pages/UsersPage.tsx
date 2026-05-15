@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,22 +15,17 @@ type User = {
   createdAt: string;
 };
 
+async function fetchUsers(): Promise<User[]> {
+  const { data } = await axios.get<{ users: User[] }>("/api/users", { withCredentials: true });
+  return data.users;
+}
+
 export default function UsersPage() {
   const { data: session } = authClient.useSession();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/users", { credentials: "include" })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{ users: User[] }>;
-      })
-      .then(({ users }) => setUsers(users))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: users = [], isLoading: loading, error } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
+  });
 
   return (
     <div className="min-h-screen bg-muted">
@@ -46,7 +42,7 @@ export default function UsersPage() {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
 
