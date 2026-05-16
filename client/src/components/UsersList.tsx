@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Pencil } from "lucide-react";
+import { AlertCircle, Pencil, Trash2 } from "lucide-react";
 import EditUserDialog from "@/components/EditUserDialog";
+import DeleteUserDialog from "@/components/DeleteUserDialog";
 
 type User = {
   id: string;
@@ -24,6 +25,7 @@ async function fetchUsers(): Promise<User[]> {
 
 export default function UsersList() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["users"],
@@ -53,7 +55,7 @@ export default function UsersList() {
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
-                <th className="w-12" />
+                <th className="w-24" />
               </tr>
             </thead>
             <tbody>
@@ -89,7 +91,7 @@ export default function UsersList() {
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
-                <th className="w-12" />
+                <th className="w-24" />
               </tr>
             </thead>
             <tbody>
@@ -110,14 +112,25 @@ export default function UsersList() {
                     })}
                   </td>
                   <td className="px-2 py-4">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Edit user"
-                      onClick={() => setEditingUser(user)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Edit user"
+                        onClick={() => setEditingUser(user)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Delete user"
+                        disabled={user.role === "admin"}
+                        onClick={() => setDeletingUser(user)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -131,6 +144,14 @@ export default function UsersList() {
           user={editingUser}
           open={true}
           onOpenChange={(v) => { if (!v) setEditingUser(null); }}
+        />
+      )}
+
+      {deletingUser && (
+        <DeleteUserDialog
+          user={deletingUser}
+          open={true}
+          onOpenChange={(v) => { if (!v) setDeletingUser(null); }}
         />
       )}
     </>
