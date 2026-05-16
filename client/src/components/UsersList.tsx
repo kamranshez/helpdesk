@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Pencil } from "lucide-react";
+import EditUserDialog from "@/components/EditUserDialog";
 
 type User = {
   id: string;
@@ -20,6 +23,8 @@ async function fetchUsers(): Promise<User[]> {
 }
 
 export default function UsersList() {
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
@@ -48,6 +53,7 @@ export default function UsersList() {
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
                 <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
+                <th className="w-12" />
               </tr>
             </thead>
             <tbody>
@@ -57,6 +63,7 @@ export default function UsersList() {
                   <td className="px-6 py-4"><Skeleton className="h-4 w-48" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-6 py-4" />
                 </tr>
               ))}
             </tbody>
@@ -67,44 +74,65 @@ export default function UsersList() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-medium text-muted-foreground">
-          {users.length} {users.length === 1 ? "user" : "users"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left px-6 py-3 text-muted-foreground font-medium">Name</th>
-              <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
-              <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
-              <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-                <td className="px-6 py-4 font-medium text-foreground">{user.name}</td>
-                <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
-                <td className="px-6 py-4">
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                    {user.role}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4 text-muted-foreground">
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </td>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-medium text-muted-foreground">
+            {users.length} {users.length === 1 ? "user" : "users"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-6 py-3 text-muted-foreground font-medium">Name</th>
+                <th className="text-left px-6 py-3 text-muted-foreground font-medium">Email</th>
+                <th className="text-left px-6 py-3 text-muted-foreground font-medium">Role</th>
+                <th className="text-left px-6 py-3 text-muted-foreground font-medium">Joined</th>
+                <th className="w-12" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
-    </Card>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-foreground">{user.name}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
+                  <td className="px-6 py-4">
+                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                      {user.role}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 text-muted-foreground">
+                    {new Date(user.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </td>
+                  <td className="px-2 py-4">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Edit user"
+                      onClick={() => setEditingUser(user)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {editingUser && (
+        <EditUserDialog
+          user={editingUser}
+          open={true}
+          onOpenChange={(v) => { if (!v) setEditingUser(null); }}
+        />
+      )}
+    </>
   );
 }

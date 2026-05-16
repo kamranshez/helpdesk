@@ -76,13 +76,12 @@ describe("CreateUserDialog", () => {
     expect(await screen.findByText("Name must be at least 3 characters")).toBeInTheDocument();
   });
 
-  it("shows email error when email is empty", async () => {
+  it("shows email error when email is invalid", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    // Leave email blank — an empty string fails z.email() but is not blocked
-    // by native browser constraint validation (input has no required attribute)
     await user.type(screen.getByLabelText("Name"), "Jane Smith");
+    await user.type(screen.getByLabelText("Email"), "not-an-email");
     await user.type(screen.getByLabelText("Password"), "password123");
     await user.click(screen.getByRole("button", { name: /create user/i }));
 

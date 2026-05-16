@@ -1,8 +1,9 @@
 import axios from "axios";
+import { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createUserSchema, type CreateUserInput } from "@helpdesk/core";
+import { updateUserSchema, type UpdateUserInput } from "@helpdesk/core";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,33 +16,46 @@ import {
 } from "@/components/ui/dialog";
 import { AlertCircle } from "lucide-react";
 
+type User = { id: string; name: string; email: string };
+
 type Props = {
+  user: User;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-async function createUser(body: CreateUserInput) {
-  const { data } = await axios.post<{ user: unknown }>("/api/users", body, { withCredentials: true });
+async function updateUser(id: string, body: UpdateUserInput) {
+  const payload = body.password ? body : { name: body.name, email: body.email };
+  const { data } = await axios.patch<{ user: unknown }>(`/api/users/${id}`, payload, {
+    withCredentials: true,
+  });
   return data.user;
 }
 
-export default function CreateUserDialog({ open, onOpenChange }: Props) {
+export default function EditUserDialog({ user, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
     setError,
-  } = useForm<CreateUserInput>({ resolver: zodResolver(createUserSchema) });
+  } = useForm<UpdateUserInput>({
+    resolver: zodResolver(updateUserSchema),
+    defaultValues: { name: user.name, email: user.email, password: "" },
+  });
+
+  useEffect(() => {
+    reset({ name: user.name, email: user.email, password: "" });
+  }, [user, reset]);
 
   const mutation = useMutation({
-    mutationFn: createUser,
+    mutationFn: (data: UpdateUserInput) => updateUser(user.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       onOpenChange(false);
-      reset();
     },
     onError: (err) => {
       const message =
@@ -55,16 +69,18 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
   function handleOpenChange(value: boolean) {
     onOpenChange(value);
     if (!value) {
-      reset();
+      reset({ name: user.name, email: user.email, password: "" });
       mutation.reset();
     }
   }
+
+  const passwordValue = watch("password");
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New User</DialogTitle>
+          <DialogTitle>Edit User</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4 mt-2">
@@ -76,25 +92,43 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
           )}
 
           <div className="space-y-1">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="Jane Smith" aria-invalid={!!errors.name} {...register("name")} />
+            <Label htmlFor="edit-name">Name</Label>
+            <Input
+              id="edit-name"
+              placeholder="Jane Smith"
+              aria-invalid={!!errors.name}
+              {...register("name")}
+            />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="text" inputMode="email" placeholder="jane@example.com" aria-invalid={!!errors.email} {...register("email")} />
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              type="text"
+              inputMode="email"
+              placeholder="jane@example.com"
+              aria-invalid={!!errors.email}
+              {...register("email")}
+            />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="Min. 8 characters" aria-invalid={!!errors.password} {...register("password")} />
-            {errors.password && (
+            <Label htmlFor="edit-password">Password</Label>
+            <Input
+              id="edit-password"
+              type="password"
+              placeholder="Leave blank to keep current password"
+              aria-invalid={!!errors.password && !!passwordValue}
+              {...register("password")}
+            />
+            {errors.password && passwordValue && (
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
           </div>
@@ -104,7 +138,7 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Creating…" : "Create User"}
+              {mutation.isPending ? "Saving…" : "Save Changes"}
             </Button>
           </div>
         </form>

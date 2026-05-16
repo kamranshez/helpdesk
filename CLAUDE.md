@@ -127,6 +127,7 @@ Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variab
 
 **Rules:**
 - Define Zod schemas in `core/src/schemas/<resource>.ts` and export them from `core/src/index.ts`.
+- **Always use explicit named re-exports in `core/src/index.ts`** — never `export *`. Bun's static analysis caches the export list from `export *` and won't pick up new names after the source file changes, causing `Export named '...' not found` errors at runtime.
 - The server uses `schema.safeParse(req.body)` for validation — no duplicate manual checks.
 - The client imports the same schema and passes it to `zodResolver` for react-hook-form.
 - Never copy a schema into client or server — always reference `@helpdesk/core`.
