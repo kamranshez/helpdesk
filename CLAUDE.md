@@ -217,6 +217,47 @@ const role = (session?.user as { role?: "admin" | "agent" } | undefined)?.role;
 | `BETTER_AUTH_SECRET` | Secret used to sign session tokens (required in production) |
 | `DATABASE_URL` | PostgreSQL connection string used by Prisma |
 
+## Component Testing (Vitest + React Testing Library)
+
+Tests live alongside their component as `ComponentName.test.tsx`. The test runner is Vitest with jsdom.
+
+**Commands (run from `client/`):**
+
+```bash
+cd client
+
+# Run all tests once
+bun run test
+
+# Watch mode
+bun run test:watch
+
+# Generate missing tests with Claude
+bun run test:write
+```
+
+**Setup files:**
+
+- `client/src/test/setup.ts` — imports `@testing-library/jest-dom` matchers globally.
+- `client/src/test/render.tsx` — exports `renderWithProviders(ui)`, which wraps any component in a fresh `QueryClient` (retries disabled). **Always use this instead of bare `render`.**
+
+**Mocking conventions:**
+
+- Mock `axios` at the module level with `vi.mock("axios")`, then spy on `axios.get` / `axios.post` with `vi.spyOn`.
+- Mock `react-router` to stub `useNavigate` and `Link`.
+- Mock `@/lib/auth-client` to return a fixed session so tests don't depend on auth state.
+- Call `vi.clearAllMocks()` in `beforeEach`.
+
+**What to test per page:**
+
+- Loading state (skeleton/spinner visible while query is in-flight).
+- Successful data render (rows, counts, formatted values).
+- Empty state (zero items, no crash).
+- Error state (destructive `<Alert>` appears, data card absent).
+- Correct Axios call (URL + `withCredentials: true`).
+
+**Reference implementation:** `client/src/pages/UsersPage.test.tsx`
+
 ## E2E Testing (Playwright)
 
 Use the **`playwright-e2e-writer` agent** for all Playwright test work — writing new tests, expanding coverage, or fixing flaky tests. Do not write E2E tests inline; always delegate to this agent.
