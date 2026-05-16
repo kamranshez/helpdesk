@@ -13,6 +13,7 @@
     "test:write": "claude 'write component tests for any page or component that is missing a .test.tsx file, following the patterns in src/pages/UsersPage.test.tsx and using renderWithProviders from src/test/render.tsx'"
   },
   "dependencies": {
+    "@helpdesk/core": "workspace:*",
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",

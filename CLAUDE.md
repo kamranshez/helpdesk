@@ -12,6 +12,7 @@ AI-powered ticket management system for support teams. Agents receive tickets (v
 
 ```
 helpdesk/
+├── core/            # Shared TypeScript package — Zod schemas, shared types (@helpdesk/core)
 ├── client/          # React + TypeScript SPA (Vite, Tailwind CSS v4, React Router v7)
 ├── server/          # Express v5 + TypeScript API (Bun runtime)
 ├── e2e/             # Playwright E2E tests (package.json sets "type": "commonjs")
@@ -98,6 +99,7 @@ Always resolve before querying — IDs are not guessable.
 - Express v5 has native async error propagation — no need for `express-async-errors` wrapper.
 - Prisma migrations live in `server/prisma/migrations/`.
 - `.env` at `server/.env` for secrets (never commit).
+- Always import Prisma enums from the generated client (`server/generated/prisma/enums.js`) — never hardcode enum strings. Example: `import { Role } from "../../generated/prisma/enums.js"` then use `Role.agent`, `Role.admin`.
 
 ## shadcn/ui
 
@@ -118,6 +120,110 @@ Installed in `client/` — style: `base-nova`, base color: `neutral`, CSS variab
 - Field-level validation errors: `<p className="text-xs text-destructive">`
 - Page layouts: `min-h-screen bg-muted` as the outer wrapper
 - Chrome autofill override is set globally in `src/index.css` — no per-input fix needed
+
+## Shared Core Package (`@helpdesk/core`)
+
+`core/` is a Bun workspace package imported by both `client` and `server` as `@helpdesk/core`. It holds anything that must stay in sync across the boundary — primarily Zod schemas and their inferred types.
+
+**Rules:**
+- Define Zod schemas in `core/src/schemas/<resource>.ts` and export them from `core/src/index.ts`.
+- The server uses `schema.safeParse(req.body)` for validation — no duplicate manual checks.
+- The client imports the same schema and passes it to `zodResolver` for react-hook-form.
+- Never copy a schema into client or server — always reference `@helpdesk/core`.
+
+**Adding a new schema:**
+
+```ts
+// core/src/schemas/tickets.ts
+import { z } from "zod";
+
+export const createTicketSchema = z.object({ ... });
+export type CreateTicketInput = z.infer<typeof createTicketSchema>;
+```
+
+```ts
+// core/src/index.ts
+export * from "./schemas/tickets.js";
+```
+
+```ts
+// server: validate request body
+import { createTicketSchema } from "@helpdesk/core";
+const result = createTicketSchema.safeParse(req.body);
+if (!result.success) { res.status(400).json({ error: result.error.issues[0].message }); return; }
+
+// client: wire into react-hook-form
+import { createTicketSchema, type CreateTicketInput } from "@helpdesk/core";
+useForm<CreateTicketInput>({ resolver: zodResolver(createTicketSchema) });
+```
+
+**Reference:** `core/src/schemas/users.ts` + how it's consumed in `client/src/pages/UsersPage.tsx` and `server/src/routes/users.ts`.
+
+## Form Validation
+
+Use **react-hook-form** + **Zod v4** for all forms. Wire them together with `@hookform/resolvers/zod`.
+
+**Zod v4 API changes** (v4 differs from v3 — use these):
+
+```ts
+// Top-level primitives replace chained string methods:
+z.email()          // not z.string().email()
+z.url()            // not z.string().url()
+z.uuid()           // not z.string().uuid()
+
+// String constraints still chain off z.string():
+z.string().min(3)
+z.string().max(100)
+```
+
+**Full pattern (schema → form → mutation → errors):**
+
+```ts
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+
+// 1. Define schema and infer type
+const schema = z.object({
+  name: z.string().min(3, "Min 3 characters"),
+  email: z.email("Valid email required"),
+});
+type FormData = z.infer<typeof schema>;
+
+// 2. Wire form
+const { register, handleSubmit, reset, formState: { errors }, setError } = useForm<FormData>({
+  resolver: zodResolver(schema),
+});
+
+// 3. Wire mutation — surface API errors via setError("root")
+const mutation = useMutation({
+  mutationFn: (data: FormData) => axios.post("/api/...", data, { withCredentials: true }),
+  onSuccess: () => { reset(); /* close modal / redirect */ },
+  onError: (err) => {
+    const message = axios.isAxiosError(err) && err.response?.data?.error
+      ? (err.response.data.error as string)
+      : "Something went wrong.";
+    setError("root", { message });
+  },
+});
+
+// 4. Submit
+<form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
+  <Input {...register("name")} />
+  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+
+  {errors.root && <Alert variant="destructive"><AlertDescription>{errors.root.message}</AlertDescription></Alert>}
+
+  <Button type="submit" disabled={mutation.isPending}>Submit</Button>
+</form>
+```
+
+- Field errors: `<p className="text-xs text-destructive">{errors.field?.message}</p>`
+- API/server errors: `setError("root", { message })` shown in a destructive `<Alert>`
+- Disable the submit button while `mutation.isPending`
+
+**Reference implementation:** `client/src/pages/UsersPage.tsx` (create user modal)
 
 ## Data Fetching
 
