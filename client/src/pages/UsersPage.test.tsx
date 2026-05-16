@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/render";
 import UsersPage from "./UsersPage";
 
@@ -125,5 +126,61 @@ describe("UsersPage", () => {
     await screen.findByText("0 users");
 
     expect(mockedGet).toHaveBeenCalledWith("/api/users", { withCredentials: true });
+  });
+});
+
+describe("UsersPage — Create User dialog", () => {
+  const user = userEvent.setup();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedGet.mockResolvedValue({ data: { users: [] } });
+  });
+
+  it("dialog is not visible on initial render", async () => {
+    renderPage();
+
+    await screen.findByText("0 users");
+
+    expect(screen.queryByText("Create New User")).not.toBeInTheDocument();
+  });
+
+  it("opens the dialog when New User button is clicked", async () => {
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: /new user/i }));
+
+    expect(screen.getByText("Create New User")).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+  });
+
+  it("closes the dialog when Escape is pressed", async () => {
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: /new user/i }));
+    expect(screen.getByText("Create New User")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Create New User")).not.toBeInTheDocument();
+    });
+  });
+
+  it("closes the dialog when the backdrop is clicked", async () => {
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: /new user/i }));
+    expect(screen.getByText("Create New User")).toBeInTheDocument();
+
+    const backdrop = document.querySelector("[data-slot='dialog-overlay']");
+    expect(backdrop).toBeInTheDocument();
+    await user.click(backdrop!);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Create New User")).not.toBeInTheDocument();
+    });
   });
 });

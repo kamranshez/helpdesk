@@ -220,6 +220,7 @@ const mutation = useMutation({
 ```
 
 - Field errors: `<p className="text-xs text-destructive">{errors.field?.message}</p>`
+- Red border on invalid fields: pass `aria-invalid={!!errors.field}` to `<Input>` — the component's styles activate on `aria-invalid`
 - API/server errors: `setError("root", { message })` shown in a destructive `<Alert>`
 - Disable the submit button while `mutation.isPending`
 

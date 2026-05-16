@@ -77,7 +77,7 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
 
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="Jane Smith" {...register("name")} />
+            <Input id="name" placeholder="Jane Smith" aria-invalid={!!errors.name} {...register("name")} />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
@@ -85,7 +85,7 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
 
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="jane@example.com" {...register("email")} />
+            <Input id="email" type="email" placeholder="jane@example.com" aria-invalid={!!errors.email} {...register("email")} />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
@@ -93,7 +93,7 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
 
           <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="Min. 8 characters" {...register("password")} />
+            <Input id="password" type="password" placeholder="Min. 8 characters" aria-invalid={!!errors.password} {...register("password")} />
             {errors.password && (
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
