@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -44,5 +44,11 @@ app.use("/api", requireAuth);
 
 app.use("/api/users", usersRouter);
 app.use("/api/tickets", ticketsRouter);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[error]", err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;

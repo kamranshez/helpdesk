@@ -8,6 +8,15 @@ import { randomUUID } from "crypto";
 
 const router = Router();
 
+router.get("/agents", async (_req, res) => {
+  const agents = await prisma.user.findMany({
+    where: { deletedAt: null, role: Role.agent },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({ agents });
+});
+
 router.get("/", requireAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
     where: { deletedAt: null },

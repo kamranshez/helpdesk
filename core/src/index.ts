@@ -7,8 +7,10 @@ export {
 
 export {
   inboundEmailSchema,
-  type InboundEmailInput,
+  updateTicketSchema,
+  type UpdateTicketInput,
   type Ticket,
+  type TicketDetail,
   type TicketStatus,
   type TicketCategory,
 } from "./schemas/tickets.js";

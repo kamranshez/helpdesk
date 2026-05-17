@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/db.js";
-import { TicketStatus, TicketCategory } from "../../generated/prisma/enums.js";
+import { TicketStatus, TicketCategory, Role } from "../../generated/prisma/enums.js";
+import { updateTicketSchema } from "@helpdesk/core";
 
 const router = Router();
 
@@ -64,6 +65,72 @@ router.get("/", async (req, res) => {
   ]);
 
   res.json({ tickets, total, page, limit });
+});
+
+router.get("/:id", async (req, res) => {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: req.params.id },
+    select: {
+      id: true,
+      subject: true,
+      bodyText: true,
+      bodyHtml: true,
+      fromEmail: true,
+      fromName: true,
+      toEmail: true,
+      status: true,
+      category: true,
+      createdAt: true,
+      updatedAt: true,
+      assignedTo: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json({ ticket });
+});
+
+router.patch("/:id", async (req, res) => {
+  const result = updateTicketSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+
+  const { assignedToId } = result.data;
+
+  if (assignedToId !== null) {
+    const agent = await prisma.user.findFirst({
+      where: { id: assignedToId, role: Role.agent, deletedAt: null },
+    });
+    if (!agent) {
+      res.status(400).json({ error: "Agent not found." });
+      return;
+    }
+  }
+
+  const existing = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    res.status(404).json({ error: "Ticket not found." });
+    return;
+  }
+
+  const ticket = await prisma.ticket.update({
+    where: { id: req.params.id },
+    data: { assignedToId, updatedAt: new Date() },
+    select: {
+      id: true,
+      assignedTo: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  res.json({ ticket });
 });
 
 export default router;

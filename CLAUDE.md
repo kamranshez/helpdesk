@@ -7,6 +7,7 @@ AI-powered ticket management system for support teams. Agents receive tickets (v
 **Users:** Admin (manages agents) and Agent (manages tickets).
 **Ticket statuses:** Open · Resolved · Closed
 **Ticket categories:** General Question · Technical Question · Refund Request
+**Ticket table:** includes `assignedToId` (nullable FK → `user.id`) and `assignedTo` relation; set via `PATCH /api/tickets/:id` with `{ assignedToId: string | null }`.
 
 ## Monorepo Layout
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -76,7 +77,12 @@ const columns = [
   columnHelper.accessor("subject", {
     header: "Subject",
     cell: (info) => (
-      <span className="font-medium text-foreground">{info.getValue() as string}</span>
+      <Link
+        to={`/tickets/${info.row.original.id}`}
+        className="font-medium text-foreground hover:underline"
+      >
+        {info.getValue() as string}
+      </Link>
     ),
   }),
   columnHelper.accessor("fromEmail", {

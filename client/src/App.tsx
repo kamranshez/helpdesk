@@ -4,6 +4,7 @@ import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 import TicketsPage from "./pages/TicketsPage";
+import TicketDetailPage from "./pages/TicketDetailPage";
 import Navbar from "./components/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <TicketsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tickets/:id"
+        element={
+          <ProtectedRoute>
+            <TicketDetailPage />
           </ProtectedRoute>
         }
       />

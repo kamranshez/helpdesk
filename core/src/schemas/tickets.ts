@@ -13,6 +13,19 @@ export type Ticket = {
   createdAt: string;
 };
 
+export type TicketDetail = Ticket & {
+  bodyText: string;
+  bodyHtml: string | null;
+  toEmail: string | null;
+  updatedAt: string;
+  assignedTo: { id: string; name: string; email: string } | null;
+};
+
+export const updateTicketSchema = z.object({
+  assignedToId: z.string().min(1, "Invalid agent ID").nullable(),
+});
+export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
+
 export const ticketCategorySchema = z.enum([
   "general_question",
   "technical_question",
