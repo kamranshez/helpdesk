@@ -7,6 +7,7 @@ import { auth } from "./lib/auth.js";
 import { prisma } from "./lib/db.js";
 import { requireAuth } from "./middleware/auth.js";
 import usersRouter from "./routes/users.js";
+import ticketsRouter from "./routes/tickets.js";
 import webhooksRouter from "./routes/webhooks.js";
 
 const app = express();
@@ -42,5 +43,6 @@ app.use("/api/webhooks", webhooksRouter);
 app.use("/api", requireAuth);
 
 app.use("/api/users", usersRouter);
+app.use("/api/tickets", ticketsRouter);
 
 export default app;

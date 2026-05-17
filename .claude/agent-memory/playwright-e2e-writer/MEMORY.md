@@ -4,3 +4,4 @@
 - [Login page selectors](selectors-login.md) — stable selectors for the login form confirmed in production use
 - [Users spec coverage](coverage-users.md) — users.spec.ts covers happy-path CRUD for /users: list, create, edit, delete (4 tests, all passing)
 - [Webhooks spec coverage](coverage-webhooks.md) — webhooks.spec.ts covers POST /api/webhooks/email: creation, auth, validation, duplicate messageId (12 tests, all passing)
+- [Tickets spec coverage](coverage-tickets.md) — tickets.spec.ts covers /tickets list view, role access, auth redirect, navbar link, count subtitle (6 tests, all passing)

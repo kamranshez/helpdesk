@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router";
 import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
+import TicketsPage from "./pages/TicketsPage";
 import Navbar from "./components/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tickets"
+        element={
+          <ProtectedRoute>
+            <TicketsPage />
           </ProtectedRoute>
         }
       />

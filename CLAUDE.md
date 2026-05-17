@@ -325,7 +325,11 @@ const role = (session?.user as { role?: "admin" | "agent" } | undefined)?.role;
 | `BETTER_AUTH_SECRET` | Secret used to sign session tokens (required in production) |
 | `DATABASE_URL` | PostgreSQL connection string used by Prisma |
 
-## Component Testing (Vitest + React Testing Library)
+## Testing Strategy
+
+**Default to component tests. Use E2E only for things that cannot be tested at the component level.**
+
+### Component Testing (Vitest + React Testing Library)
 
 Tests live alongside their component as `ComponentName.test.tsx`. The test runner is Vitest with jsdom.
 
@@ -339,9 +343,6 @@ bun run test
 
 # Watch mode
 bun run test:watch
-
-# Generate missing tests with Claude
-bun run test:write
 ```
 
 **Setup files:**
@@ -356,24 +357,34 @@ bun run test:write
 - Mock `@/lib/auth-client` to return a fixed session so tests don't depend on auth state.
 - Call `vi.clearAllMocks()` in `beforeEach`.
 
-**What to test per page:**
+**What to cover in component tests (covers the vast majority of cases):**
 
 - Loading state (skeleton/spinner visible while query is in-flight).
-- Successful data render (rows, counts, formatted values).
+- Successful data render (rows, counts, formatted values, badge labels).
 - Empty state (zero items, no crash).
 - Error state (destructive `<Alert>` appears, data card absent).
 - Correct Axios call (URL + `withCredentials: true`).
+- Navbar links and UI elements rendered given a mocked session.
+- Form validation errors and submission behaviour.
 
-**Reference implementation:** `client/src/pages/UsersPage.test.tsx`
+**Reference implementation:** `client/src/pages/TicketsPage.test.tsx`, `client/src/pages/UsersPage.test.tsx`
 
-## E2E Testing (Playwright)
+### E2E Testing (Playwright)
 
-Use the **`playwright-e2e-writer` agent** for all Playwright test work — writing new tests, expanding coverage, or fixing flaky tests. Do not write E2E tests inline; always delegate to this agent.
+E2E tests are slow, require a real server + database, and accumulate state across runs. Use them **only** for flows that genuinely cannot be tested at the component level.
 
-**When to invoke it:**
-- After completing any user-facing feature (page, form, flow)
-- When the user explicitly asks for E2E tests
-- When adding role-based access to a route (verify redirect behaviour)
+**Reserve E2E for:**
+- Auth flows that depend on real session state — e.g. unauthenticated redirect to `/login`, role-based redirect (agent → `/`).
+- Role access checks that must prove a route is or is not accessible to a given role with a real session.
+- Pure API contracts with no UI — e.g. webhook endpoint behaviour (happy path, auth rejection, validation, deduplication).
+
+**Do not write E2E tests for:**
+- Page rendering, data display, badge labels, formatted values — use component tests.
+- Navbar link visibility — mock the session in a component test.
+- Count subtitles or empty states — component tests cover these without a real DB.
+- Anything already covered by a component test.
+
+Use the **`playwright-e2e-writer` agent** when E2E tests are genuinely needed. Do not write them inline.
 
 Run tests with: `bun test:e2e`
 

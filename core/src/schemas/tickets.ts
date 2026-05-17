@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+export type TicketStatus = "open" | "resolved" | "closed";
+export type TicketCategory = "general_question" | "technical_question" | "refund_request";
+
+export type Ticket = {
+  id: string;
+  subject: string;
+  fromEmail: string;
+  fromName: string | null;
+  status: TicketStatus;
+  category: TicketCategory | null;
+  createdAt: string;
+};
+
 export const ticketCategorySchema = z.enum([
   "general_question",
   "technical_question",
