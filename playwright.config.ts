@@ -38,6 +38,7 @@ export default defineConfig({
         BETTER_AUTH_SECRET: 'test-secret-do-not-use-in-production-xxxxx',
         BETTER_AUTH_URL: 'http://localhost:3000',
         SESSION_SECRET: 'test-session-secret',
+        EMAIL_WEBHOOK_SECRET: 'test-webhook-secret',
       },
     },
     {
