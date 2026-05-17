@@ -64,6 +64,7 @@ const TICKETS = [
 describe("TicketsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("shows loading skeleton rows while fetching", () => {
@@ -154,14 +155,14 @@ describe("TicketsPage", () => {
     expect(await screen.findByText("Mar 15, 2024")).toBeInTheDocument();
   });
 
-  it("shows empty state message when there are no tickets", async () => {
+  it("shows empty state message when no tickets match filters", async () => {
     mockedGet.mockResolvedValue({ data: { tickets: [] } });
 
     renderPage();
 
     expect(await screen.findByText("0 tickets")).toBeInTheDocument();
     expect(
-      screen.getByText("No tickets yet. They will appear here once received via email.")
+      screen.getByText("No tickets match the selected filters.")
     ).toBeInTheDocument();
   });
 
@@ -174,7 +175,7 @@ describe("TicketsPage", () => {
     expect(screen.queryByText(/\d+ tickets?/)).not.toBeInTheDocument();
   });
 
-  it("calls GET /api/tickets with default sort params (createdAt desc)", async () => {
+  it("calls GET /api/tickets with default params (createdAt desc, no filters)", async () => {
     mockedGet.mockResolvedValue({ data: { tickets: [] } });
 
     renderPage();
@@ -185,6 +186,35 @@ describe("TicketsPage", () => {
       params: { sortBy: "createdAt", sortOrder: "desc" },
       withCredentials: true,
     });
+  });
+
+  it("renders the search input", async () => {
+    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+
+    renderPage();
+
+    await screen.findByText("0 tickets");
+
+    expect(screen.getByRole("textbox", { name: /search tickets/i })).toBeInTheDocument();
+  });
+
+  it("re-fetches with search param after debounce when user types in the search box", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+
+    renderPage();
+
+    await screen.findByText("3 tickets");
+
+    await user.type(screen.getByRole("textbox", { name: /search tickets/i }), "order");
+
+    // Wait long enough for the 300 ms debounce to fire
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", search: "order" },
+        withCredentials: true,
+      });
+    }, { timeout: 1000 });
   });
 
   it("re-fetches with new sort params when a column header is clicked", async () => {
@@ -201,6 +231,55 @@ describe("TicketsPage", () => {
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
         params: { sortBy: "subject", sortOrder: "asc" },
+        withCredentials: true,
+      });
+    });
+  });
+
+  it("renders Status and Category filter dropdowns", async () => {
+    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+
+    renderPage();
+
+    await screen.findByText("0 tickets");
+
+    expect(screen.getByLabelText("Filter by status")).toBeInTheDocument();
+    expect(screen.getByLabelText("Filter by category")).toBeInTheDocument();
+  });
+
+  it("re-fetches with status param when status filter is changed", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+
+    renderPage();
+
+    await screen.findByText("3 tickets");
+
+    await user.click(screen.getByLabelText("Filter by status"));
+    await user.click(screen.getByRole("option", { name: "Open" }));
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", status: "open" },
+        withCredentials: true,
+      });
+    });
+  });
+
+  it("re-fetches with category param when category filter is changed", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+
+    renderPage();
+
+    await screen.findByText("3 tickets");
+
+    await user.click(screen.getByLabelText("Filter by category"));
+    await user.click(screen.getByRole("option", { name: "Technical" }));
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
+        params: { sortBy: "createdAt", sortOrder: "desc", category: "technical_question" },
         withCredentials: true,
       });
     });

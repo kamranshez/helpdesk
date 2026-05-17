@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -15,7 +15,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Search } from "lucide-react";
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   open: "Open",
@@ -35,9 +42,21 @@ function statusVariant(status: TicketStatus): "default" | "secondary" | "outline
   return "outline";
 }
 
-async function fetchTickets(sortBy: string, sortOrder: string): Promise<Ticket[]> {
+async function fetchTickets(
+  sortBy: string,
+  sortOrder: string,
+  status: string,
+  category: string,
+  search: string,
+): Promise<Ticket[]> {
   const { data } = await axios.get<{ tickets: Ticket[] }>("/api/tickets", {
-    params: { sortBy, sortOrder },
+    params: {
+      sortBy,
+      sortOrder,
+      ...(status !== "all" && { status }),
+      ...(category !== "all" && { category }),
+      ...(search && { search }),
+    },
     withCredentials: true,
   });
   return data.tickets;
@@ -108,13 +127,23 @@ function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
 export default function TicketsPage() {
   const { data: session } = authClient.useSession();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Debounce the search input by 300 ms before sending to the server
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const sortBy = sorting[0]?.id ?? "createdAt";
   const sortOrder = sorting[0]?.desc ? "desc" : "asc";
 
   const { data: tickets = [], isLoading, error } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder],
-    queryFn: () => fetchTickets(sortBy, sortOrder),
+    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search],
+    queryFn: () => fetchTickets(sortBy, sortOrder, statusFilter, categoryFilter, search),
   });
 
   const table = useReactTable({
@@ -133,6 +162,41 @@ export default function TicketsPage() {
       <div className="p-8 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Tickets</h1>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                className="pl-8 w-56"
+                placeholder="Search tickets…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                aria-label="Search tickets"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+              <SelectTrigger className="w-36" aria-label="Filter by status">
+                {statusFilter === "all" ? "All Statuses" : STATUS_LABELS[statusFilter as TicketStatus]}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "all")}>
+              <SelectTrigger className="w-40" aria-label="Filter by category">
+                {categoryFilter === "all" ? "All Categories" : CATEGORY_LABELS[categoryFilter as TicketCategory]}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="general_question">General</SelectItem>
+                <SelectItem value="technical_question">Technical</SelectItem>
+                <SelectItem value="refund_request">Refund</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {error && (
@@ -182,7 +246,7 @@ export default function TicketsPage() {
             <CardContent className="p-0">
               {tickets.length === 0 ? (
                 <p className="px-6 py-8 text-sm text-center text-muted-foreground">
-                  No tickets yet. They will appear here once received via email.
+                  No tickets match the selected filters.
                 </p>
               ) : (
                 <table className="w-full text-sm">
