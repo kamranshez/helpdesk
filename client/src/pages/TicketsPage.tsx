@@ -7,6 +7,7 @@ import {
   flexRender,
   createColumnHelper,
   type SortingState,
+  type PaginationState,
 } from "@tanstack/react-table";
 import type { Ticket, TicketStatus, TicketCategory } from "@helpdesk/core";
 import { authClient } from "@/lib/auth-client";
@@ -22,7 +23,8 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   open: "Open",
@@ -42,24 +44,30 @@ function statusVariant(status: TicketStatus): "default" | "secondary" | "outline
   return "outline";
 }
 
+type TicketsResponse = { tickets: Ticket[]; total: number; page: number; limit: number };
+
 async function fetchTickets(
   sortBy: string,
   sortOrder: string,
   status: string,
   category: string,
   search: string,
-): Promise<Ticket[]> {
-  const { data } = await axios.get<{ tickets: Ticket[] }>("/api/tickets", {
+  page: number,
+  limit: number,
+): Promise<TicketsResponse> {
+  const { data } = await axios.get<TicketsResponse>("/api/tickets", {
     params: {
       sortBy,
       sortOrder,
+      page,
+      limit,
       ...(status !== "all" && { status }),
       ...(category !== "all" && { category }),
       ...(search && { search }),
     },
     withCredentials: true,
   });
-  return data.tickets;
+  return data;
 }
 
 const columnHelper = createColumnHelper<Ticket>();
@@ -125,34 +133,61 @@ function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
 }
 
 export default function TicketsPage() {
+  const PAGE_SIZE = 10;
+
   const { data: session } = authClient.useSession();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
 
   // Debounce the search input by 300 ms before sending to the server
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
   const sortBy = sorting[0]?.id ?? "createdAt";
   const sortOrder = sorting[0]?.desc ? "desc" : "asc";
 
-  const { data: tickets = [], isLoading, error } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search],
-    queryFn: () => fetchTickets(sortBy, sortOrder, statusFilter, categoryFilter, search),
+  // Reset to page 1 when sort or filters change
+  function handleSortingChange(updater: Parameters<typeof setSorting>[0]) {
+    setSorting(updater);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }
+  function handleStatusFilter(v: string | null) {
+    setStatusFilter(v ?? "all");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }
+  function handleCategoryFilter(v: string | null) {
+    setCategoryFilter(v ?? "all");
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search, pagination.pageIndex],
+    queryFn: () => fetchTickets(sortBy, sortOrder, statusFilter, categoryFilter, search, pagination.pageIndex + 1, PAGE_SIZE),
   });
+
+  const tickets = data?.tickets ?? [];
+  const total = data?.total ?? 0;
+  const pageCount = Math.ceil(total / PAGE_SIZE);
 
   const table = useReactTable({
     data: tickets,
     columns,
-    state: { sorting },
-    onSortingChange: setSorting,
+    state: { sorting, pagination },
+    onSortingChange: handleSortingChange,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+    manualPagination: true,
+    rowCount: total,
     enableMultiSort: false,
   });
 
@@ -173,7 +208,7 @@ export default function TicketsPage() {
                 aria-label="Search tickets"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+            <Select value={statusFilter} onValueChange={handleStatusFilter}>
               <SelectTrigger className="w-36" aria-label="Filter by status">
                 {statusFilter === "all" ? "All Statuses" : STATUS_LABELS[statusFilter as TicketStatus]}
               </SelectTrigger>
@@ -185,7 +220,7 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "all")}>
+            <Select value={categoryFilter} onValueChange={handleCategoryFilter}>
               <SelectTrigger className="w-40" aria-label="Filter by category">
                 {categoryFilter === "all" ? "All Categories" : CATEGORY_LABELS[categoryFilter as TicketCategory]}
               </SelectTrigger>
@@ -240,7 +275,7 @@ export default function TicketsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-medium text-muted-foreground">
-                {tickets.length} {tickets.length === 1 ? "ticket" : "tickets"}
+                {total} {total === 1 ? "ticket" : "tickets"}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -289,6 +324,56 @@ export default function TicketsPage() {
                 </table>
               )}
             </CardContent>
+
+            {pageCount > 1 && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Page {pagination.pageIndex + 1} of {pageCount}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={pagination.pageIndex === 0}
+                    aria-label="First page"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                    First
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={pagination.pageIndex === 0}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={pagination.pageIndex >= pageCount - 1}
+                    aria-label="Next page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => table.setPageIndex(pageCount - 1)}
+                    disabled={pagination.pageIndex >= pageCount - 1}
+                    aria-label="Last page"
+                  >
+                    Last
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         )}
       </div>

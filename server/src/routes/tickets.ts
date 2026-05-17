@@ -27,32 +27,43 @@ router.get("/", async (req, res) => {
     ? (categoryParam as TicketCategory)
     : undefined;
 
-  const tickets = await prisma.ticket.findMany({
-    where: {
-      ...(status ? { status } : {}),
-      ...(category ? { category } : {}),
-      ...(search
-        ? {
-            OR: [
-              { subject: { contains: search, mode: "insensitive" } },
-              { fromEmail: { contains: search, mode: "insensitive" } },
-              { fromName: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { [sortBy]: sortOrder },
-    select: {
-      id: true,
-      subject: true,
-      fromEmail: true,
-      fromName: true,
-      status: true,
-      category: true,
-      createdAt: true,
-    },
-  });
-  res.json({ tickets });
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 100);
+  const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+
+  const where = {
+    ...(status ? { status } : {}),
+    ...(category ? { category } : {}),
+    ...(search
+      ? {
+          OR: [
+            { subject: { contains: search, mode: "insensitive" as const } },
+            { fromEmail: { contains: search, mode: "insensitive" as const } },
+            { fromName: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [tickets, total] = await Promise.all([
+    prisma.ticket.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        subject: true,
+        fromEmail: true,
+        fromName: true,
+        status: true,
+        category: true,
+        createdAt: true,
+      },
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  res.json({ tickets, total, page, limit });
 });
 
 export default router;
