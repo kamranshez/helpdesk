@@ -7,6 +7,7 @@ import { auth } from "./lib/auth.js";
 import { prisma } from "./lib/db.js";
 import { requireAuth } from "./middleware/auth.js";
 import usersRouter from "./routes/users.js";
+import webhooksRouter from "./routes/webhooks.js";
 
 const app = express();
 
@@ -33,6 +34,9 @@ app.get("/api/health", async (_req, res) => {
   await prisma.$queryRaw`SELECT 1`;
   res.json({ status: "ok", database: "connected" });
 });
+
+// Unauthenticated webhook routes — must be before requireAuth
+app.use("/api/webhooks", webhooksRouter);
 
 // All /api routes below this line require a valid session
 app.use("/api", requireAuth);
