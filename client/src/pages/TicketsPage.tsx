@@ -1,5 +1,13 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper,
+  type SortingState,
+} from "@tanstack/react-table";
 import type { Ticket, TicketStatus, TicketCategory } from "@helpdesk/core";
 import { authClient } from "@/lib/auth-client";
 import Navbar from "@/components/Navbar";
@@ -7,12 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
-
-async function fetchTickets(): Promise<Ticket[]> {
-  const { data } = await axios.get<{ tickets: Ticket[] }>("/api/tickets", { withCredentials: true });
-  return data.tickets;
-}
+import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   open: "Open",
@@ -32,11 +35,96 @@ function statusVariant(status: TicketStatus): "default" | "secondary" | "outline
   return "outline";
 }
 
+async function fetchTickets(sortBy: string, sortOrder: string): Promise<Ticket[]> {
+  const { data } = await axios.get<{ tickets: Ticket[] }>("/api/tickets", {
+    params: { sortBy, sortOrder },
+    withCredentials: true,
+  });
+  return data.tickets;
+}
+
+const columnHelper = createColumnHelper<Ticket>();
+
+const columns = [
+  columnHelper.accessor("subject", {
+    header: "Subject",
+    cell: (info) => (
+      <span className="font-medium text-foreground">{info.getValue() as string}</span>
+    ),
+  }),
+  columnHelper.accessor("fromEmail", {
+    header: "From",
+    cell: (info) => {
+      const ticket = info.row.original;
+      return (
+        <span className="text-muted-foreground">
+          {ticket.fromName ? (
+            <>{ticket.fromName} <span className="text-xs">({ticket.fromEmail})</span></>
+          ) : (
+            ticket.fromEmail
+          )}
+        </span>
+      );
+    },
+  }),
+  columnHelper.accessor("category", {
+    header: "Category",
+    cell: (info) => {
+      const category = info.getValue() as TicketCategory | null;
+      return category ? (
+        <Badge variant="secondary">{CATEGORY_LABELS[category]}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      );
+    },
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    cell: (info) => {
+      const status = info.getValue() as TicketStatus;
+      return <Badge variant={statusVariant(status)}>{STATUS_LABELS[status]}</Badge>;
+    },
+  }),
+  columnHelper.accessor("createdAt", {
+    header: "Received",
+    cell: (info) => (
+      <span className="text-muted-foreground whitespace-nowrap">
+        {new Date(info.getValue() as string).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })}
+      </span>
+    ),
+  }),
+];
+
+function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
+  if (sorted === "asc") return <ArrowUp className="h-3.5 w-3.5 ml-1 shrink-0" />;
+  if (sorted === "desc") return <ArrowDown className="h-3.5 w-3.5 ml-1 shrink-0" />;
+  return <ArrowUpDown className="h-3.5 w-3.5 ml-1 shrink-0 opacity-40" />;
+}
+
 export default function TicketsPage() {
   const { data: session } = authClient.useSession();
+  const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+
+  const sortBy = sorting[0]?.id ?? "createdAt";
+  const sortOrder = sorting[0]?.desc ? "desc" : "asc";
+
   const { data: tickets = [], isLoading, error } = useQuery({
-    queryKey: ["tickets"],
-    queryFn: fetchTickets,
+    queryKey: ["tickets", sortBy, sortOrder],
+    queryFn: () => fetchTickets(sortBy, sortOrder),
+  });
+
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+    enableMultiSort: false,
   });
 
   return (
@@ -63,11 +151,9 @@ export default function TicketsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Subject</th>
-                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">From</th>
-                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Category</th>
-                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Status</th>
-                    <th className="text-left px-6 py-3 text-muted-foreground font-medium">Received</th>
+                    {["Subject", "From", "Category", "Status", "Received"].map((h) => (
+                      <th key={h} className="text-left px-6 py-3 text-muted-foreground font-medium">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -101,46 +187,38 @@ export default function TicketsPage() {
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Subject</th>
-                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">From</th>
-                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Category</th>
-                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Status</th>
-                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Received</th>
-                    </tr>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id} className="border-b border-border">
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            className="text-left px-6 py-3 text-muted-foreground font-medium"
+                          >
+                            <button
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className="flex items-center hover:text-foreground transition-colors"
+                              aria-label={`Sort by ${header.column.id}`}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              <SortIcon sorted={header.column.getIsSorted()} />
+                            </button>
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
                   </thead>
                   <tbody>
-                    {tickets.map((ticket) => (
-                      <tr key={ticket.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-foreground max-w-xs truncate">
-                          {ticket.subject}
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground">
-                          {ticket.fromName ? (
-                            <span>{ticket.fromName} <span className="text-xs">({ticket.fromEmail})</span></span>
-                          ) : (
-                            ticket.fromEmail
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {ticket.category ? (
-                            <Badge variant="secondary">{CATEGORY_LABELS[ticket.category]}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant={statusVariant(ticket.status)}>
-                            {STATUS_LABELS[ticket.status]}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                          {new Date(ticket.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

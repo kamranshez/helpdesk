@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/render";
 import TicketsPage from "./TicketsPage";
 
@@ -173,14 +174,36 @@ describe("TicketsPage", () => {
     expect(screen.queryByText(/\d+ tickets?/)).not.toBeInTheDocument();
   });
 
-  it("calls GET /api/tickets with credentials", async () => {
+  it("calls GET /api/tickets with default sort params (createdAt desc)", async () => {
     mockedGet.mockResolvedValue({ data: { tickets: [] } });
 
     renderPage();
 
     await screen.findByText("0 tickets");
 
-    expect(mockedGet).toHaveBeenCalledWith("/api/tickets", { withCredentials: true });
+    expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
+      params: { sortBy: "createdAt", sortOrder: "desc" },
+      withCredentials: true,
+    });
+  });
+
+  it("re-fetches with new sort params when a column header is clicked", async () => {
+    const user = userEvent.setup();
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+
+    renderPage();
+
+    await screen.findByText("3 tickets");
+
+    // Click the Subject header to sort ascending
+    await user.click(screen.getByRole("button", { name: /sort by subject/i }));
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
+        params: { sortBy: "subject", sortOrder: "asc" },
+        withCredentials: true,
+      });
+    });
   });
 
   it("renders the Tickets nav link in the navbar", async () => {
