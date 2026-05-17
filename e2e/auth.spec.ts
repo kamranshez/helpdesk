@@ -1,7 +1,6 @@
 // auth.spec.ts — Covers authentication, route protection, role-based access, and sign-out.
-// All tests use CommonJS require syntax (e2e/ package.json sets "type": "commonjs").
 
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Shared login helper
