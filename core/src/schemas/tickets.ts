@@ -21,16 +21,20 @@ export type TicketDetail = Ticket & {
   assignedTo: { id: string; name: string; email: string } | null;
 };
 
-export const updateTicketSchema = z.object({
-  assignedToId: z.string().min(1, "Invalid agent ID").nullable(),
-});
-export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
+export const ticketStatusSchema = z.enum(["open", "resolved", "closed"]);
 
 export const ticketCategorySchema = z.enum([
   "general_question",
   "technical_question",
   "refund_request",
 ]);
+
+export const updateTicketSchema = z.object({
+  assignedToId: z.string().min(1, "Invalid agent ID").nullable().optional(),
+  status: ticketStatusSchema.optional(),
+  category: ticketCategorySchema.nullable().optional(),
+});
+export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
 export const inboundEmailSchema = z.object({
   from: z.email("Valid sender email required"),

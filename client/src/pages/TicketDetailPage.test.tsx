@@ -52,7 +52,7 @@ const AGENTS = [
   { id: "agent-2", name: "Carol Jones", email: "carol@example.com" },
 ];
 
-function mockGetSuccess(ticket = TICKET_UNASSIGNED, agents = AGENTS) {
+function mockGetSuccess(ticket: typeof TICKET_UNASSIGNED | typeof TICKET_ASSIGNED = TICKET_UNASSIGNED, agents = AGENTS) {
   mockedGet.mockImplementation((url: unknown) => {
     if (url === "/api/tickets/ticket-1") return Promise.resolve({ data: { ticket } });
     if (url === "/api/users/agents") return Promise.resolve({ data: { agents } });
@@ -89,8 +89,8 @@ describe("TicketDetailPage", () => {
     expect(await screen.findByText("My order is missing")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText(/alice@example\.com/)).toBeInTheDocument();
-    expect(screen.getByText("Open")).toBeInTheDocument();
-    expect(screen.getByText("General")).toBeInTheDocument();
+    expect(screen.getAllByText("Open").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("General").length).toBeGreaterThan(0);
     expect(
       screen.getByText("Hi, I placed order #123 and it has not arrived.")
     ).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe("TicketDetailPage", () => {
     renderPage();
 
     await screen.findByText("My order is missing");
-    expect(screen.getByText(/Mar 15, 2024/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Mar 15, 2024/).length).toBeGreaterThan(0);
   });
 
   // --- assigned-to display ----------------------------------------------------
@@ -122,7 +122,7 @@ describe("TicketDetailPage", () => {
     renderPage();
 
     await screen.findByText("My order is missing");
-    expect(screen.getByRole("combobox")).toHaveTextContent("Unassigned");
+    expect(screen.getByRole("combobox", { name: /assigned to/i })).toHaveTextContent("Unassigned");
   });
 
   it("shows the assigned agent name in the dropdown trigger", async () => {
@@ -130,7 +130,7 @@ describe("TicketDetailPage", () => {
     renderPage();
 
     await screen.findByText("My order is missing");
-    expect(screen.getByRole("combobox")).toHaveTextContent("Bob Smith");
+    expect(screen.getByRole("combobox", { name: /assigned to/i })).toHaveTextContent("Bob Smith");
   });
 
   // --- agents dropdown --------------------------------------------------------
@@ -142,7 +142,7 @@ describe("TicketDetailPage", () => {
 
     await screen.findByText("My order is missing");
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
 
     expect(await screen.findByRole("option", { name: "Bob Smith" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Carol Jones" })).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe("TicketDetailPage", () => {
 
     await screen.findByText("My order is missing");
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
     await user.click(await screen.findByRole("option", { name: "Bob Smith" }));
 
     await waitFor(() => {
@@ -179,7 +179,7 @@ describe("TicketDetailPage", () => {
 
     await screen.findByText("My order is missing");
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
     await user.click(await screen.findByRole("option", { name: "Unassigned" }));
 
     await waitFor(() => {
@@ -200,7 +200,7 @@ describe("TicketDetailPage", () => {
     await screen.findByText("My order is missing");
     const initialGetCount = mockedGet.mock.calls.length;
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
     await user.click(await screen.findByRole("option", { name: "Bob Smith" }));
 
     await waitFor(() => {
@@ -216,7 +216,7 @@ describe("TicketDetailPage", () => {
 
     await screen.findByText("My order is missing");
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
     await user.click(await screen.findByRole("option", { name: "Bob Smith" }));
 
     expect(await screen.findByText("Failed to save")).toBeInTheDocument();
@@ -230,10 +230,10 @@ describe("TicketDetailPage", () => {
 
     await screen.findByText("My order is missing");
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: /assigned to/i }));
     await user.click(await screen.findByRole("option", { name: "Bob Smith" }));
 
-    expect(screen.getByRole("combobox")).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: /assigned to/i })).toBeDisabled();
   });
 
   // --- error states -----------------------------------------------------------

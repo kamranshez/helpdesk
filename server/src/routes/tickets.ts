@@ -103,9 +103,9 @@ router.patch("/:id", async (req, res) => {
     return;
   }
 
-  const { assignedToId } = result.data;
+  const { assignedToId, status, category } = result.data;
 
-  if (assignedToId !== null) {
+  if (assignedToId !== undefined && assignedToId !== null) {
     const agent = await prisma.user.findFirst({
       where: { id: assignedToId, role: Role.agent, deletedAt: null },
     });
@@ -123,9 +123,16 @@ router.patch("/:id", async (req, res) => {
 
   const ticket = await prisma.ticket.update({
     where: { id: req.params.id },
-    data: { assignedToId, updatedAt: new Date() },
+    data: {
+      ...(assignedToId !== undefined && { assignedToId }),
+      ...(status !== undefined && { status: status as TicketStatus }),
+      ...(category !== undefined && { category: category as TicketCategory | null }),
+      updatedAt: new Date(),
+    },
     select: {
       id: true,
+      status: true,
+      category: true,
       assignedTo: { select: { id: true, name: true, email: true } },
     },
   });
