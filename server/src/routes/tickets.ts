@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/db.js";
-import { TicketStatus, TicketCategory, Role } from "../../generated/prisma/enums.js";
-import { updateTicketSchema } from "@helpdesk/core";
+import { TicketStatus, TicketCategory, Role, ReplySenderType } from "../../generated/prisma/enums.js";
+import { updateTicketSchema, createReplySchema } from "@helpdesk/core";
 
 const router = Router();
 
@@ -138,6 +138,70 @@ router.patch("/:id", async (req, res) => {
   });
 
   res.json({ ticket });
+});
+
+router.get("/:id/replies", async (req, res) => {
+  const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: req.params.id },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      ticketId: true,
+      authorId: true,
+      author: { select: { id: true, name: true, email: true } },
+      senderType: true,
+      body: true,
+      createdAt: true,
+    },
+  });
+
+  res.json({ replies });
+});
+
+router.post("/:id/replies", async (req, res) => {
+  const result = createReplySchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const session = res.locals.session as { user: { id: string; role?: string } };
+  const senderType =
+    session.user.role === "admin" || session.user.role === "agent"
+      ? ReplySenderType.agent
+      : ReplySenderType.customer;
+
+  const reply = await prisma.reply.create({
+    data: {
+      ticketId: req.params.id,
+      authorId: session.user.id,
+      senderType,
+      body: result.data.body,
+    },
+    select: {
+      id: true,
+      ticketId: true,
+      authorId: true,
+      author: { select: { id: true, name: true, email: true } },
+      senderType: true,
+      body: true,
+      createdAt: true,
+    },
+  });
+
+  res.status(201).json({ reply });
 });
 
 export default router;

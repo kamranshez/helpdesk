@@ -36,6 +36,23 @@ export const updateTicketSchema = z.object({
 });
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
+export type ReplySenderType = "agent" | "customer";
+
+export type Reply = {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  author: { id: string; name: string; email: string };
+  senderType: ReplySenderType;
+  body: string;
+  createdAt: string;
+};
+
+export const createReplySchema = z.object({
+  body: z.string().min(1, "Reply cannot be empty").max(10000, "Reply is too long"),
+});
+export type CreateReplyInput = z.infer<typeof createReplySchema>;
+
 export const inboundEmailSchema = z.object({
   from: z.email("Valid sender email required"),
   fromName: z.string().optional(),

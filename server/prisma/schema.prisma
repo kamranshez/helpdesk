@@ -29,6 +29,11 @@ enum TicketCategory {
   refund_request
 }
 
+enum ReplySenderType {
+  agent
+  customer
+}
+
 model User {
   id            String    @id
   name          String
@@ -42,6 +47,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   tickets       Ticket[]
+  replies       Reply[]
 
   @@map("user")
 }
@@ -94,8 +100,22 @@ model Ticket {
   assignedTo     User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  replies        Reply[]
 
   @@map("ticket")
+}
+
+model Reply {
+  id         String          @id @default(uuid())
+  ticketId   String
+  ticket     Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  senderType ReplySenderType
+  body       String
+  createdAt  DateTime        @default(now())
+
+  @@map("reply")
 }
 
 model Verification {
