@@ -113,6 +113,7 @@ model Reply {
   author     User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
   senderType ReplySenderType
   body       String
+  bodyHtml   String?
   createdAt  DateTime        @default(now())
 
   @@map("reply")

@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import type { Reply, ReplySenderType } from "@helpdesk/core";
 import { formatDate, getInitials } from "@/lib/ticket-utils";
 
@@ -30,13 +31,24 @@ export default function ReplyBubble({ reply }: { reply: Reply }) {
             {isAgent ? "Agent" : "Customer"}
           </span>
         </div>
-        <pre
-          className={`text-sm text-foreground whitespace-pre-wrap break-words font-sans rounded-lg px-3 py-2 leading-relaxed ${
-            isAgent ? "bg-primary/10" : "bg-muted"
-          }`}
-        >
-          {reply.body}
-        </pre>
+        {reply.bodyHtml ? (
+          <div
+            className={`text-sm text-foreground rounded-lg px-3 py-2 leading-relaxed prose prose-sm max-w-none ${
+              isAgent ? "bg-primary/10" : "bg-muted"
+            }`}
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(reply.bodyHtml, { USE_PROFILES: { html: true } }),
+            }}
+          />
+        ) : (
+          <pre
+            className={`text-sm text-foreground whitespace-pre-wrap break-words font-sans rounded-lg px-3 py-2 leading-relaxed ${
+              isAgent ? "bg-primary/10" : "bg-muted"
+            }`}
+          >
+            {reply.body}
+          </pre>
+        )}
       </div>
     </div>
   );

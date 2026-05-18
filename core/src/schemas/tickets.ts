@@ -45,6 +45,7 @@ export type Reply = {
   author: { id: string; name: string; email: string };
   senderType: ReplySenderType;
   body: string;
+  bodyHtml: string | null;
   createdAt: string;
 };
 
@@ -54,13 +55,13 @@ export const createReplySchema = z.object({
 export type CreateReplyInput = z.infer<typeof createReplySchema>;
 
 export const inboundEmailSchema = z.object({
-  from: z.email("Valid sender email required"),
-  fromName: z.string().optional(),
-  to: z.string().optional(),
-  subject: z.string().min(1, "Subject is required"),
-  bodyText: z.string().min(1, "Body is required"),
-  bodyHtml: z.string().optional(),
-  messageId: z.string().optional(),
+  from: z.email("Valid sender email required").max(254),
+  fromName: z.string().max(100).optional(),
+  to: z.string().max(254).optional(),
+  subject: z.string().min(1, "Subject is required").max(998),
+  bodyText: z.string().min(1, "Body is required").max(200_000),
+  bodyHtml: z.string().max(500_000).optional(),
+  messageId: z.string().max(998).optional(),
   category: ticketCategorySchema.optional(),
 });
 

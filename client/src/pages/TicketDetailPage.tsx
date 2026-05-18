@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import DOMPurify from "dompurify";
 import { authClient } from "@/lib/auth-client";
 import { fetchTicket, fetchAgents } from "@/lib/ticket-api";
 import { STATUS_LABELS, CATEGORY_LABELS, statusVariant, formatDate } from "@/lib/ticket-utils";
@@ -119,9 +120,20 @@ export default function TicketDetailPage() {
 
                     <div className="border-t border-border pt-5">
                       <p className="text-sm font-semibold text-foreground mb-3">Message</p>
-                      <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-sans bg-muted rounded-md p-4 max-h-[32rem] overflow-y-auto leading-relaxed">
-                        {ticket.bodyText}
-                      </pre>
+                      {ticket.bodyHtml ? (
+                        <div
+                          className="text-sm text-foreground bg-muted rounded-md p-4 max-h-[32rem] overflow-y-auto leading-relaxed prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(ticket.bodyHtml, {
+                              USE_PROFILES: { html: true },
+                            }),
+                          }}
+                        />
+                      ) : (
+                        <pre className="text-sm text-foreground whitespace-pre-wrap break-words font-sans bg-muted rounded-md p-4 max-h-[32rem] overflow-y-auto leading-relaxed">
+                          {ticket.bodyText}
+                        </pre>
+                      )}
                     </div>
                   </div>
 

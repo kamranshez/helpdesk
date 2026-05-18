@@ -157,6 +157,7 @@ router.get("/:id/replies", async (req, res) => {
       author: { select: { id: true, name: true, email: true } },
       senderType: true,
       body: true,
+      bodyHtml: true,
       createdAt: true,
     },
   });
@@ -197,6 +198,7 @@ router.post("/:id/replies", async (req, res) => {
       author: { select: { id: true, name: true, email: true } },
       senderType: true,
       body: true,
+      bodyHtml: true,
       createdAt: true,
     },
   });
