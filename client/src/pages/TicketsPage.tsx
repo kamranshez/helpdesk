@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,6 +11,8 @@ import {
 } from "@tanstack/react-table";
 import type { Ticket, TicketStatus, TicketCategory } from "@helpdesk/core";
 import { authClient } from "@/lib/auth-client";
+import { fetchTickets } from "@/lib/ticket-api";
+import { STATUS_LABELS, CATEGORY_LABELS, statusVariant } from "@/lib/ticket-utils";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,51 +26,17 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-
-const STATUS_LABELS: Record<TicketStatus, string> = {
-  open: "Open",
-  resolved: "Resolved",
-  closed: "Closed",
-};
-
-const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  general_question: "General",
-  technical_question: "Technical",
-  refund_request: "Refund",
-};
-
-function statusVariant(status: TicketStatus): "default" | "secondary" | "outline" {
-  if (status === "open") return "default";
-  if (status === "resolved") return "secondary";
-  return "outline";
-}
-
-type TicketsResponse = { tickets: Ticket[]; total: number; page: number; limit: number };
-
-async function fetchTickets(
-  sortBy: string,
-  sortOrder: string,
-  status: string,
-  category: string,
-  search: string,
-  page: number,
-  limit: number,
-): Promise<TicketsResponse> {
-  const { data } = await axios.get<TicketsResponse>("/api/tickets", {
-    params: {
-      sortBy,
-      sortOrder,
-      page,
-      limit,
-      ...(status !== "all" && { status }),
-      ...(category !== "all" && { category }),
-      ...(search && { search }),
-    },
-    withCredentials: true,
-  });
-  return data;
-}
+import {
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 const columnHelper = createColumnHelper<Ticket>();
 
@@ -92,7 +59,9 @@ const columns = [
       return (
         <span className="text-muted-foreground">
           {ticket.fromName ? (
-            <>{ticket.fromName} <span className="text-xs">({ticket.fromEmail})</span></>
+            <>
+              {ticket.fromName} <span className="text-xs">({ticket.fromEmail})</span>
+            </>
           ) : (
             ticket.fromEmail
           )}
@@ -138,18 +107,20 @@ function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
   return <ArrowUpDown className="h-3.5 w-3.5 ml-1 shrink-0 opacity-40" />;
 }
 
-export default function TicketsPage() {
-  const PAGE_SIZE = 10;
+const PAGE_SIZE = 10;
 
+export default function TicketsPage() {
   const { data: session } = authClient.useSession();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: PAGE_SIZE,
+  });
 
-  // Debounce the search input by 300 ms before sending to the server
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput.trim());
@@ -161,7 +132,6 @@ export default function TicketsPage() {
   const sortBy = sorting[0]?.id ?? "createdAt";
   const sortOrder = sorting[0]?.desc ? "desc" : "asc";
 
-  // Reset to page 1 when sort or filters change
   function handleSortingChange(updater: Parameters<typeof setSorting>[0]) {
     setSorting(updater);
     setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -177,7 +147,8 @@ export default function TicketsPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search, pagination.pageIndex],
-    queryFn: () => fetchTickets(sortBy, sortOrder, statusFilter, categoryFilter, search, pagination.pageIndex + 1, PAGE_SIZE),
+    queryFn: () =>
+      fetchTickets(sortBy, sortOrder, statusFilter, categoryFilter, search, pagination.pageIndex + 1, PAGE_SIZE),
   });
 
   const tickets = data?.tickets ?? [];
@@ -228,7 +199,9 @@ export default function TicketsPage() {
 
             <Select value={categoryFilter} onValueChange={handleCategoryFilter}>
               <SelectTrigger className="w-40" aria-label="Filter by category">
-                {categoryFilter === "all" ? "All Categories" : CATEGORY_LABELS[categoryFilter as TicketCategory]}
+                {categoryFilter === "all"
+                  ? "All Categories"
+                  : CATEGORY_LABELS[categoryFilter as TicketCategory]}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
@@ -257,18 +230,33 @@ export default function TicketsPage() {
                 <thead>
                   <tr className="border-b border-border">
                     {["Subject", "From", "Category", "Status", "Received"].map((h) => (
-                      <th key={h} className="text-left px-6 py-3 text-muted-foreground font-medium">{h}</th>
+                      <th
+                        key={h}
+                        className="text-left px-6 py-3 text-muted-foreground font-medium"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b border-border last:border-0">
-                      <td className="px-6 py-4"><Skeleton className="h-4 w-48" /></td>
-                      <td className="px-6 py-4"><Skeleton className="h-4 w-36" /></td>
-                      <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                      <td className="px-6 py-4"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-48" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-36" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-5 w-14 rounded-full" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-24" />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -80,7 +80,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders ticket count as plural when there are multiple tickets", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -88,7 +88,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders ticket count as singular when there is exactly one ticket", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]], total: 1, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -96,7 +96,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders subject and from email for each ticket", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -111,7 +111,7 @@ describe("TicketsPage", () => {
   });
 
   it("shows fromName alongside email when the ticket has one", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]], total: 1, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -121,7 +121,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders status badges — Open, Resolved, Closed", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -131,7 +131,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders category badges with human-readable labels", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -140,7 +140,7 @@ describe("TicketsPage", () => {
   });
 
   it("shows a dash when category is null", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[2]] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[2]], total: 1, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -148,7 +148,7 @@ describe("TicketsPage", () => {
   });
 
   it("formats the received date in human-readable form", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [TICKETS[0]], total: 1, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -156,7 +156,7 @@ describe("TicketsPage", () => {
   });
 
   it("shows empty state message when no tickets match filters", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [], total: 0, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -176,20 +176,20 @@ describe("TicketsPage", () => {
   });
 
   it("calls GET /api/tickets with default params (createdAt desc, no filters)", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [], total: 0, page: 1, limit: 10 } });
 
     renderPage();
 
     await screen.findByText("0 tickets");
 
     expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
-      params: { sortBy: "createdAt", sortOrder: "desc" },
+      params: { sortBy: "createdAt", sortOrder: "desc", page: 1, limit: 10 },
       withCredentials: true,
     });
   });
 
   it("renders the search input", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [], total: 0, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -200,7 +200,7 @@ describe("TicketsPage", () => {
 
   it("re-fetches with search param after debounce when user types in the search box", async () => {
     const user = userEvent.setup();
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -211,7 +211,7 @@ describe("TicketsPage", () => {
     // Wait long enough for the 300 ms debounce to fire
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
-        params: { sortBy: "createdAt", sortOrder: "desc", search: "order" },
+        params: { sortBy: "createdAt", sortOrder: "desc", page: 1, limit: 10, search: "order" },
         withCredentials: true,
       });
     }, { timeout: 1000 });
@@ -219,7 +219,7 @@ describe("TicketsPage", () => {
 
   it("re-fetches with new sort params when a column header is clicked", async () => {
     const user = userEvent.setup();
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -230,14 +230,14 @@ describe("TicketsPage", () => {
 
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
-        params: { sortBy: "subject", sortOrder: "asc" },
+        params: { sortBy: "subject", sortOrder: "asc", page: 1, limit: 10 },
         withCredentials: true,
       });
     });
   });
 
   it("renders Status and Category filter dropdowns", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [], total: 0, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -249,7 +249,7 @@ describe("TicketsPage", () => {
 
   it("re-fetches with status param when status filter is changed", async () => {
     const user = userEvent.setup();
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -260,7 +260,7 @@ describe("TicketsPage", () => {
 
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
-        params: { sortBy: "createdAt", sortOrder: "desc", status: "open" },
+        params: { sortBy: "createdAt", sortOrder: "desc", page: 1, limit: 10, status: "open" },
         withCredentials: true,
       });
     });
@@ -268,7 +268,7 @@ describe("TicketsPage", () => {
 
   it("re-fetches with category param when category filter is changed", async () => {
     const user = userEvent.setup();
-    mockedGet.mockResolvedValue({ data: { tickets: TICKETS } });
+    mockedGet.mockResolvedValue({ data: { tickets: TICKETS, total: 3, page: 1, limit: 10 } });
 
     renderPage();
 
@@ -279,14 +279,14 @@ describe("TicketsPage", () => {
 
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/api/tickets", {
-        params: { sortBy: "createdAt", sortOrder: "desc", category: "technical_question" },
+        params: { sortBy: "createdAt", sortOrder: "desc", page: 1, limit: 10, category: "technical_question" },
         withCredentials: true,
       });
     });
   });
 
   it("renders the Tickets nav link in the navbar", async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } });
+    mockedGet.mockResolvedValue({ data: { tickets: [], total: 0, page: 1, limit: 10 } });
 
     renderPage();
 

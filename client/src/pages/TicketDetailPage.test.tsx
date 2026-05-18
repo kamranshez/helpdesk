@@ -56,6 +56,7 @@ function mockGetSuccess(ticket: typeof TICKET_UNASSIGNED | typeof TICKET_ASSIGNE
   mockedGet.mockImplementation((url: unknown) => {
     if (url === "/api/tickets/ticket-1") return Promise.resolve({ data: { ticket } });
     if (url === "/api/users/agents") return Promise.resolve({ data: { agents } });
+    if (url === "/api/tickets/ticket-1/replies") return Promise.resolve({ data: { replies: [] } });
     return Promise.reject(new Error(`Unexpected GET: ${url}`));
   });
 }
