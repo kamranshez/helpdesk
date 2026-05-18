@@ -47,6 +47,11 @@ const TICKET_ASSIGNED = {
   assignedTo: { id: "agent-1", name: "Bob Smith", email: "bob@example.com" },
 };
 
+const TICKET_NO_NAME = {
+  ...TICKET_UNASSIGNED,
+  fromName: null,
+};
+
 const AGENTS = [
   { id: "agent-1", name: "Bob Smith", email: "bob@example.com" },
   { id: "agent-2", name: "Carol Jones", email: "carol@example.com" },
@@ -274,5 +279,186 @@ describe("TicketDetailPage", () => {
     expect(mockedGet).toHaveBeenCalledWith("/api/users/agents", {
       withCredentials: true,
     });
+  });
+
+  it("fetches replies with withCredentials", async () => {
+    mockGetSuccess();
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    expect(mockedGet).toHaveBeenCalledWith("/api/tickets/ticket-1/replies", {
+      withCredentials: true,
+    });
+  });
+
+  // --- sender display ---------------------------------------------------------
+
+  it("shows fromEmail only when the ticket has no fromName", async () => {
+    mockGetSuccess(TICKET_NO_NAME);
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    expect(screen.getByText("alice@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  });
+
+  // --- status dropdown --------------------------------------------------------
+
+  it("shows the current status in the dropdown trigger", async () => {
+    mockGetSuccess();
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    expect(screen.getByRole("combobox", { name: /status/i })).toHaveTextContent("Open");
+  });
+
+  it("lists all status options in the dropdown", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+
+    expect(await screen.findByRole("option", { name: "Open" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Resolved" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Closed" })).toBeInTheDocument();
+  });
+
+  it("calls PATCH with the new status when a status option is selected", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockResolvedValue({ data: { ticket: { ...TICKET_UNASSIGNED, status: "resolved" } } });
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    await waitFor(() => {
+      expect(mockedPatch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1",
+        { status: "resolved" },
+        { withCredentials: true }
+      );
+    });
+  });
+
+  it("disables the status dropdown while the mutation is in flight", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    expect(screen.getByRole("combobox", { name: /^status$/i })).toBeDisabled();
+  });
+
+  it("shows Failed to save when a status PATCH errors", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockRejectedValue(new Error("Server error"));
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /^status$/i }));
+    await user.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    expect(await screen.findByText("Failed to save")).toBeInTheDocument();
+  });
+
+  // --- category dropdown ------------------------------------------------------
+
+  it("shows the current category label in the dropdown trigger", async () => {
+    mockGetSuccess();
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    expect(screen.getByRole("combobox", { name: /category/i })).toHaveTextContent("General");
+  });
+
+  it("lists all category options including None", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /category/i }));
+
+    expect(await screen.findByRole("option", { name: "None" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "General" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Technical" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Refund" })).toBeInTheDocument();
+  });
+
+  it("calls PATCH with the new category when a category option is selected", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockResolvedValue({
+      data: { ticket: { ...TICKET_UNASSIGNED, category: "technical_question" } },
+    });
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /category/i }));
+    await user.click(await screen.findByRole("option", { name: "Technical" }));
+
+    await waitFor(() => {
+      expect(mockedPatch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1",
+        { category: "technical_question" },
+        { withCredentials: true }
+      );
+    });
+  });
+
+  it("calls PATCH with null when None is selected for category", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockResolvedValue({
+      data: { ticket: { ...TICKET_UNASSIGNED, category: null } },
+    });
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /category/i }));
+    await user.click(await screen.findByRole("option", { name: "None" }));
+
+    await waitFor(() => {
+      expect(mockedPatch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1",
+        { category: null },
+        { withCredentials: true }
+      );
+    });
+  });
+
+  it("disables the category dropdown while the mutation is in flight", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /category/i }));
+    await user.click(await screen.findByRole("option", { name: "Technical" }));
+
+    expect(screen.getByRole("combobox", { name: /category/i })).toBeDisabled();
+  });
+
+  it("shows Failed to save when a category PATCH errors", async () => {
+    const user = userEvent.setup();
+    mockGetSuccess();
+    mockedPatch.mockRejectedValue(new Error("Server error"));
+    renderPage();
+
+    await screen.findByText("My order is missing");
+    await user.click(screen.getByRole("combobox", { name: /category/i }));
+    await user.click(await screen.findByRole("option", { name: "Technical" }));
+
+    expect(await screen.findByText("Failed to save")).toBeInTheDocument();
   });
 });
