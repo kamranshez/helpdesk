@@ -137,7 +137,7 @@ export default function ReplyThread({ ticketId }: Props) {
                 type="button"
                 variant="outline"
                 onClick={handlePolish}
-                disabled={isPolishing || replyMutation.isPending}
+                disabled={isPolishing || replyMutation.isPending || !bodyValue?.trim()}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 {isPolishing ? "Polishing…" : "Polish"}
