@@ -1,5 +1,7 @@
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { TicketCategory } from "../../generated/prisma/enums.js";
+import type { TicketModel } from "../../generated/prisma/models/Ticket.js";
 
 if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY env var is required");
 
@@ -23,6 +25,24 @@ export async function summarizeTicket(
     prompt: `Subject: ${subject}\n\nOriginal message:\n${body}${conversationSection}`,
   });
   return text;
+}
+
+export async function classifyTicket(
+  { subject, bodyText }: Pick<TicketModel, "subject" | "bodyText">
+): Promise<TicketCategory> {
+  const { text } = await generateText({
+    model: openai("gpt-4.1-nano"),
+    system:
+      'Classify the support ticket into exactly one of these categories: "general_question", "technical_question", or "refund_request". Reply with only the category string — nothing else.',
+    prompt: `Subject: ${subject}\n\nMessage:\n${bodyText}`,
+  });
+  const trimmed = text.trim() as TicketCategory;
+  const valid: TicketCategory[] = [
+    TicketCategory.general_question,
+    TicketCategory.technical_question,
+    TicketCategory.refund_request,
+  ];
+  return valid.includes(trimmed) ? trimmed : TicketCategory.general_question;
 }
 
 export async function polishReply(
