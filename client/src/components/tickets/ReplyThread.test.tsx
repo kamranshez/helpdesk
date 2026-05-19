@@ -122,17 +122,44 @@ describe("ReplyThread", () => {
     expect(screen.getByRole("button", { name: /send reply/i })).toBeInTheDocument();
   });
 
-  // --- validation -------------------------------------------------------------
+  // --- disabled state ---------------------------------------------------------
 
-  it("shows a validation error when submitting an empty reply", async () => {
+  it("Send Reply is disabled when the textarea is empty", async () => {
+    mockReplies([]);
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    expect(screen.getByRole("button", { name: /send reply/i })).toBeDisabled();
+  });
+
+  it("Polish is disabled when the textarea is empty", async () => {
+    mockReplies([]);
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    expect(screen.getByRole("button", { name: /^polish$/i })).toBeDisabled();
+  });
+
+  it("both buttons are disabled when the textarea contains only whitespace", async () => {
     const user = userEvent.setup();
     mockReplies([]);
     renderThread();
 
     await screen.findByText("No replies yet.");
-    await user.click(screen.getByRole("button", { name: /send reply/i }));
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "   ");
+    expect(screen.getByRole("button", { name: /send reply/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^polish$/i })).toBeDisabled();
+  });
 
-    expect(await screen.findByText("Reply cannot be empty")).toBeInTheDocument();
+  it("both buttons are enabled after typing a non-empty reply", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "Hello");
+    expect(screen.getByRole("button", { name: /send reply/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /^polish$/i })).not.toBeDisabled();
   });
 
   // --- submission -------------------------------------------------------------
@@ -233,6 +260,108 @@ describe("ReplyThread", () => {
     await user.click(screen.getByRole("button", { name: /send reply/i }));
 
     expect(await screen.findByText("Reply body is too long.")).toBeInTheDocument();
+  });
+
+  // --- polish button ----------------------------------------------------------
+
+  it("renders the Polish button", async () => {
+    mockReplies([]);
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    expect(screen.getByRole("button", { name: /^polish$/i })).toBeInTheDocument();
+  });
+
+  it("calls POST /api/tickets/:id/polish with the draft body and withCredentials", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    mockedPost.mockResolvedValue({ data: { polished: "Polished text." } });
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "rough draft");
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    await waitFor(() => {
+      expect(mockedPost).toHaveBeenCalledWith(
+        `/api/tickets/${TICKET_ID}/polish`,
+        { body: "rough draft" },
+        { withCredentials: true }
+      );
+    });
+  });
+
+  it("replaces the textarea content with the polished text on success", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    mockedPost.mockResolvedValue({ data: { polished: "This is the polished reply." } });
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "rough draft");
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Write a reply…")).toHaveValue(
+        "This is the polished reply."
+      );
+    });
+  });
+
+  it("shows 'Polishing…' and disables both buttons while the request is in flight", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    mockedPost.mockReturnValue(new Promise(() => {}));
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "rough draft");
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    expect(await screen.findByRole("button", { name: /polishing/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /send reply/i })).toBeDisabled();
+  });
+
+  it("shows an error alert when the polish request fails", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    mockedPost.mockRejectedValue(new Error("Network error"));
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "rough draft");
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    expect(
+      await screen.findByText("Failed to polish reply. Please try again.")
+    ).toBeInTheDocument();
+  });
+
+  it("re-enables the Polish button after a failed polish request", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    mockedPost.mockRejectedValue(new Error("Network error"));
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    await user.type(screen.getByPlaceholderText("Write a reply…"), "rough draft");
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^polish$/i })).not.toBeDisabled();
+    });
+  });
+
+  it("does not call the polish endpoint when the textarea is empty", async () => {
+    const user = userEvent.setup();
+    mockReplies([]);
+    renderThread();
+
+    await screen.findByText("No replies yet.");
+    // button is disabled — click should have no effect
+    await user.click(screen.getByRole("button", { name: /^polish$/i }));
+
+    expect(mockedPost).not.toHaveBeenCalled();
   });
 
   // --- API calls --------------------------------------------------------------
