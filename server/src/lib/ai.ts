@@ -1,3 +1,6 @@
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { join, dirname } from "path";
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { TicketCategory } from "../../generated/prisma/enums.js";
@@ -6,6 +9,9 @@ import type { TicketModel } from "../../generated/prisma/models/Ticket.js";
 if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY env var is required");
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const knowledgeBase = readFileSync(join(__dirname, "../../knowledge-base.md"), "utf-8");
 
 export async function summarizeTicket(
   subject: string,
@@ -43,6 +49,56 @@ export async function classifyTicket(
     TicketCategory.refund_request,
   ];
   return valid.includes(trimmed) ? trimmed : TicketCategory.general_question;
+}
+
+export async function autoResolveTicket(
+  subject: string,
+  bodyText: string,
+  fromName?: string | null
+): Promise<{ resolved: boolean; reply: string | null }> {
+  const firstName = fromName ? fromName.split(" ")[0] : null;
+  const { text } = await generateText({
+    model: openai("gpt-4.1-mini"),
+    system: `You are a support ticket auto-resolution system. Your goal is to resolve as many tickets as possible using the knowledge base below — do NOT escalate unnecessarily.
+
+STRICT RULE: Answer using ONLY information explicitly stated in the knowledge base. Do NOT use general knowledge, make assumptions, or invent answers.
+
+RESOLVE the ticket ({"resolved": true, "reply": "..."}) ONLY when the knowledge base explicitly contains information that directly answers the customer's question:
+- Policy questions (refunds, access, certificates, lifetime access) covered in the KB
+- How-to questions with answers explicitly in the KB
+- Troubleshooting steps listed in the KB — sharing those steps IS a full resolution
+
+ESCALATE ({"resolved": false, "reply": null}) when ANY of the following apply:
+- The answer is not explicitly stated in the knowledge base — even if you could guess an answer, escalate
+- The user explicitly threatens legal action
+- The user mentions a chargeback or payment dispute
+- The user requests a refund clearly outside the 30-day window
+- The user reports a security breach or account compromise
+
+Reply format rules (apply when resolved: true):
+- ${firstName ? `Open with "Hi ${firstName},"` : 'Open with "Hi there,"'}
+- Write in a professional, warm, and customer-friendly tone
+- Use clear formatting: short paragraphs or a numbered/bulleted list when providing steps
+- Close with a friendly sign-off line (e.g. "Let us know if you need anything else!")
+- End with the signature: "VoipOps Support"
+
+Respond with valid JSON only — no markdown wrapping, no explanation outside the JSON.
+{"resolved": true, "reply": "<formatted reply>"} or {"resolved": false, "reply": null}
+
+Knowledge base:
+${knowledgeBase}`,
+    prompt: `Subject: ${subject}\n\nMessage:\n${bodyText}`,
+  });
+
+  try {
+    const parsed = JSON.parse(text.trim()) as { resolved: boolean; reply: string | null };
+    if (parsed.resolved === true && typeof parsed.reply === "string") {
+      return { resolved: true, reply: parsed.reply };
+    }
+    return { resolved: false, reply: null };
+  } catch {
+    return { resolved: false, reply: null };
+  }
 }
 
 export async function polishReply(

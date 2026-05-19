@@ -1,6 +1,8 @@
 import type { TicketStatus, TicketCategory } from "@helpdesk/core";
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
+  new: "New",
+  processing: "Processing",
   open: "Open",
   resolved: "Resolved",
   closed: "Closed",
@@ -13,6 +15,7 @@ export const CATEGORY_LABELS: Record<TicketCategory, string> = {
 };
 
 export function statusVariant(status: TicketStatus): "default" | "secondary" | "outline" {
+  if (status === "new" || status === "processing") return "outline";
   if (status === "open") return "default";
   if (status === "resolved") return "secondary";
   return "outline";

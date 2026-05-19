@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
 import boss from "../lib/boss.js";
 import { CLASSIFY_QUEUE, type ClassifyJobData } from "../workers/classify.js";
+import { AUTO_RESOLVE_QUEUE, type AutoResolveJobData } from "../workers/auto-resolve.js";
 import { inboundEmailSchema } from "@helpdesk/core";
 
 const router = Router();
@@ -40,6 +41,18 @@ router.post("/email", async (req, res) => {
         })
         .catch((err) => console.error(`[classify] enqueue ticket ${ticket.id} failed:`, err));
     }
+
+    boss
+      .send(AUTO_RESOLVE_QUEUE, {
+        ticketId: ticket.id,
+        subject: ticket.subject,
+        bodyText: ticket.bodyText,
+        fromName: ticket.fromName,
+      } satisfies AutoResolveJobData)
+      .then((id) => {
+        if (!id) console.error(`[auto-resolve] boss.send returned null for ticket ${ticket.id}`);
+      })
+      .catch((err) => console.error(`[auto-resolve] enqueue ticket ${ticket.id} failed:`, err));
   } catch (err: unknown) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       res.status(409).json({ error: "A ticket with this message ID already exists." });

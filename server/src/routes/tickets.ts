@@ -33,6 +33,7 @@ router.get("/", async (req, res) => {
   const page = Math.max(parseInt(req.query.page as string) || 1, 1);
 
   const where = {
+    NOT: { status: { in: [TicketStatus.new, TicketStatus.processing] } },
     ...(status ? { status } : {}),
     ...(category ? { category } : {}),
     ...(search

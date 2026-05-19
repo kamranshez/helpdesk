@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type TicketStatus = "open" | "resolved" | "closed";
+export type TicketStatus = "new" | "processing" | "open" | "resolved" | "closed";
 export type TicketCategory = "general_question" | "technical_question" | "refund_request";
 
 export type Ticket = {
@@ -21,7 +21,7 @@ export type TicketDetail = Ticket & {
   assignedTo: { id: string; name: string; email: string } | null;
 };
 
-export const ticketStatusSchema = z.enum(["open", "resolved", "closed"]);
+export const ticketStatusSchema = z.enum(["new", "processing", "open", "resolved", "closed"]);
 
 export const ticketCategorySchema = z.enum([
   "general_question",
