@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, MessageSquare } from "lucide-react";
+import { AlertCircle, MessageSquare, Sparkles } from "lucide-react";
 
 type Props = { ticketId: string };
 
@@ -25,13 +25,40 @@ export default function ReplyThread({ ticketId }: Props) {
     queryFn: () => fetchReplies(ticketId),
   });
 
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [polishError, setPolishError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    getValues,
+    setValue,
     formState: { errors },
     setError,
   } = useForm<CreateReplyInput>({ resolver: zodResolver(createReplySchema) });
+
+  const bodyValue = watch("body");
+
+  async function handlePolish() {
+    const draft = getValues("body");
+    if (!draft?.trim()) return;
+    setIsPolishing(true);
+    setPolishError(null);
+    try {
+      const res = await axios.post<{ polished: string }>(
+        `/api/tickets/${ticketId}/polish`,
+        { body: draft },
+        { withCredentials: true }
+      );
+      setValue("body", res.data.polished, { shouldValidate: true });
+    } catch {
+      setPolishError("Failed to polish reply. Please try again.");
+    } finally {
+      setIsPolishing(false);
+    }
+  }
 
   const replyMutation = useMutation({
     mutationFn: (data: CreateReplyInput) => postReply(ticketId, data),
@@ -99,8 +126,23 @@ export default function ReplyThread({ ticketId }: Props) {
                 <AlertDescription>{errors.root.message}</AlertDescription>
               </Alert>
             )}
-            <div className="flex justify-end">
-              <Button type="submit" disabled={replyMutation.isPending}>
+            {polishError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{polishError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex justify-between items-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePolish}
+                disabled={isPolishing || replyMutation.isPending}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isPolishing ? "Polishing…" : "Polish"}
+              </Button>
+              <Button type="submit" disabled={replyMutation.isPending || isPolishing || !bodyValue?.trim()}>
                 {replyMutation.isPending ? "Sending…" : "Send Reply"}
               </Button>
             </div>

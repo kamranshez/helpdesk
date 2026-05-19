@@ -50,11 +50,12 @@ client/src/
 server/src/
 ├── lib/
 │   ├── auth.ts    # Better Auth config
-│   └── db.ts      # Prisma client
+│   ├── db.ts      # Prisma client
+│   └── ai.ts      # Vercel AI SDK — openai client + AI service functions
 ├── middleware/
 │   └── auth.ts    # requireAuth, requireAdmin
 ├── routes/
-│   ├── tickets.ts   # GET/PATCH /api/tickets, GET/POST /api/tickets/:id/replies
+│   ├── tickets.ts   # GET/PATCH /api/tickets, GET/POST /api/tickets/:id/replies, POST /api/tickets/:id/polish
 │   ├── users.ts     # User CRUD (admin-only) + GET /api/users/agents
 │   └── webhooks.ts  # POST /api/webhooks/email — inbound email → ticket
 └── app.ts           # Express app setup, route mounting order
@@ -68,7 +69,7 @@ server/src/
 | Backend  | Node/Bun, Express v5, TypeScript |
 | Database | PostgreSQL via Prisma ORM |
 | Auth     | Session-based (database sessions) via Better Auth |
-| AI       | Claude API (Anthropic) — classification, summaries, suggested replies |
+| AI       | Vercel AI SDK (`ai` + `@ai-sdk/openai`) with `gpt-4.1-nano` — reply polishing, classification, summaries |
 | Email    | SendGrid or Mailgun (inbound webhook + outbound) |
 
 ## Dev Commands
@@ -255,6 +256,34 @@ Tests live alongside their source file as `<Name>.test.tsx`. Run from `client/`.
 - `webhooks.spec.ts` — ticket creation (all fields + required-only + categories), auth rejection, validation, duplicate messageId
 
 Use the **`playwright-e2e-writer` agent** when E2E is genuinely needed.
+
+## AI Service
+
+Packages: `ai` (Vercel AI SDK core) + `@ai-sdk/openai` (OpenAI provider). Both installed in `server/`.
+
+**Pattern — add a new AI capability:**
+
+1. **Schema** — add input schema + type to `core/src/schemas/tickets.ts` (or the relevant resource schema), export from `core/src/index.ts` with an explicit named export.
+2. **Service function** — add a function to `server/src/lib/ai.ts`. Keep all model config, system prompts, and `generateText`/`streamText` calls here. Export only the function.
+3. **Route** — validate with `schema.safeParse(req.body)`, call the service function, return the result. No AI SDK imports in route files.
+
+**`server/src/lib/ai.ts` structure:**
+
+```ts
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function polishReply(draft: string, ticketSubject: string): Promise<string> { … }
+// add further exported functions here
+```
+
+**Env var:** `OPENAI_API_KEY` in `server/.env` — validated at startup in `ai.ts` with `throw new Error(...)`.
+
+**Model:** `gpt-4.1-nano` (fast, low-cost). Upgrade to `gpt-4.1` or `gpt-4.1-mini` for tasks needing higher accuracy.
+
+**Reference:** `server/src/lib/ai.ts`, `server/src/routes/tickets.ts` (`POST /:id/polish`), `core/src/schemas/tickets.ts` (`polishReplySchema`).
 
 ## Security
 

@@ -16,8 +16,10 @@
     "seed": "bun prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.64",
     "@helpdesk/core": "workspace:*",
     "@prisma/adapter-pg": "^7.8.0",
+    "ai": "^6.0.185",
     "better-auth": "^1.6.10",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

@@ -11,6 +11,8 @@ export {
   type UpdateTicketInput,
   createReplySchema,
   type CreateReplyInput,
+  polishReplySchema,
+  type PolishReplyInput,
   type Reply,
   type ReplySenderType,
   type Ticket,

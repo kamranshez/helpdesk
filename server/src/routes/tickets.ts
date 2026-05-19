@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../lib/db.js";
 import { TicketStatus, TicketCategory, Role, ReplySenderType } from "../../generated/prisma/enums.js";
-import { updateTicketSchema, createReplySchema } from "@helpdesk/core";
+import { updateTicketSchema, createReplySchema, polishReplySchema } from "@helpdesk/core";
+import { polishReply } from "../lib/ai.js";
 
 const router = Router();
 
@@ -204,6 +205,28 @@ router.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json({ reply });
+});
+
+router.post("/:id/polish", async (req, res) => {
+  const result = polishReplySchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+  const { body } = result.data;
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: req.params.id },
+    select: { subject: true, bodyText: true, fromName: true },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const session = res.locals.session as { user: { name: string } };
+  const polished = await polishReply(body, ticket.subject, session.user.name, ticket.fromName ?? undefined);
+  res.json({ polished });
 });
 
 export default router;

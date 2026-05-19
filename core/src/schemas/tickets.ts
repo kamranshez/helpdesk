@@ -54,6 +54,11 @@ export const createReplySchema = z.object({
 });
 export type CreateReplyInput = z.infer<typeof createReplySchema>;
 
+export const polishReplySchema = z.object({
+  body: z.string().min(1, "Reply cannot be empty").max(10000, "Reply is too long"),
+});
+export type PolishReplyInput = z.infer<typeof polishReplySchema>;
+
 export const inboundEmailSchema = z.object({
   from: z.email("Valid sender email required").max(254),
   fromName: z.string().max(100).optional(),
