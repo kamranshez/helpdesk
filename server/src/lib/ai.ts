@@ -5,6 +5,26 @@ if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY env var is requ
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+export async function summarizeTicket(
+  subject: string,
+  body: string,
+  replies: Array<{ senderType: string; body: string; authorName: string }>
+): Promise<string> {
+  const replyLines = replies
+    .map((r) => `[${r.senderType === "agent" ? "Agent" : "Customer"} - ${r.authorName}]: ${r.body}`)
+    .join("\n\n");
+  const conversationSection =
+    replies.length > 0 ? `\n\nConversation:\n${replyLines}` : "";
+
+  const { text } = await generateText({
+    model: openai("gpt-4.1-nano"),
+    system:
+      "You are a helpful support assistant. Summarize the support ticket and conversation concisely. Include: the customer's issue, key points exchanged, and the current status or resolution if apparent. Keep it to 3–5 sentences. Return only the summary text — no headings, no bullet points.",
+    prompt: `Subject: ${subject}\n\nOriginal message:\n${body}${conversationSection}`,
+  });
+  return text;
+}
+
 export async function polishReply(
   draft: string,
   ticketSubject: string,

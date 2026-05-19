@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/db.js";
 import { TicketStatus, TicketCategory, Role, ReplySenderType } from "../../generated/prisma/enums.js";
 import { updateTicketSchema, createReplySchema, polishReplySchema } from "@helpdesk/core";
-import { polishReply } from "../lib/ai.js";
+import { polishReply, summarizeTicket } from "../lib/ai.js";
 
 const router = Router();
 
@@ -227,6 +227,34 @@ router.post("/:id/polish", async (req, res) => {
   const session = res.locals.session as { user: { name: string } };
   const polished = await polishReply(body, ticket.subject, session.user.name, ticket.fromName ?? undefined);
   res.json({ polished });
+});
+
+router.post("/:id/summarize", async (req, res) => {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: req.params.id },
+    select: { subject: true, bodyText: true },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: req.params.id },
+    orderBy: { createdAt: "asc" },
+    select: {
+      senderType: true,
+      body: true,
+      author: { select: { name: true } },
+    },
+  });
+
+  const summary = await summarizeTicket(
+    ticket.subject,
+    ticket.bodyText,
+    replies.map((r) => ({ senderType: r.senderType, body: r.body, authorName: r.author.name }))
+  );
+  res.json({ summary });
 });
 
 export default router;

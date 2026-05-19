@@ -56,3 +56,8 @@ export async function postReply(ticketId: string, body: CreateReplyInput): Promi
   const { data } = await axios.post<{ reply: Reply }>(`/api/tickets/${ticketId}/replies`, body, OPTS);
   return data.reply;
 }
+
+export async function summarizeTicket(ticketId: string): Promise<string> {
+  const { data } = await axios.post<{ summary: string }>(`/api/tickets/${ticketId}/summarize`, {}, OPTS);
+  return data.summary;
+}
