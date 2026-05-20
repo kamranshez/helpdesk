@@ -61,3 +61,23 @@ export async function summarizeTicket(ticketId: string): Promise<string> {
   const { data } = await axios.post<{ summary: string }>(`/api/tickets/${ticketId}/summarize`, {}, OPTS);
   return data.summary;
 }
+
+export type Stats = {
+  totalTickets: number;
+  openTickets: number;
+  aiResolved: number;
+  aiResolutionRate: number;
+  avgResolutionTimeMs: number | null;
+};
+
+export async function fetchStats(): Promise<Stats> {
+  const { data } = await axios.get<Stats>("/api/stats", OPTS);
+  return data;
+}
+
+export type TicketsPerDayPoint = { date: string; count: number };
+
+export async function fetchTicketsPerDay(): Promise<TicketsPerDayPoint[]> {
+  const { data } = await axios.get<{ data: TicketsPerDayPoint[] }>("/api/stats/tickets-per-day", OPTS);
+  return data.data;
+}

@@ -123,12 +123,17 @@ router.patch("/:id", async (req, res) => {
     return;
   }
 
+  const isResolvingStatus =
+    status === TicketStatus.resolved || status === TicketStatus.closed;
+  const shouldSetResolvedAt = isResolvingStatus && !existing.resolvedAt;
+
   const ticket = await prisma.ticket.update({
     where: { id: req.params.id },
     data: {
       ...(assignedToId !== undefined && { assignedToId }),
       ...(status !== undefined && { status: status as TicketStatus }),
       ...(category !== undefined && { category: category as TicketCategory | null }),
+      ...(shouldSetResolvedAt && { resolvedAt: new Date() }),
       updatedAt: new Date(),
     },
     select: {

@@ -55,7 +55,7 @@ export async function registerAutoResolveWorker() {
         }),
         prisma.ticket.update({
           where: { id: ticketId },
-          data: { status: TicketStatus.resolved },
+          data: { status: TicketStatus.resolved, resolvedByAI: true, resolvedAt: new Date() },
         }),
       ]);
     } else {
