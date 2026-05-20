@@ -15,7 +15,7 @@ export default function UsersPage() {
       <Navbar userName={session?.user.name ?? ""} />
       <div className="p-8 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <h1 className="text-3xl font-normal text-foreground" style={{ fontFamily: "var(--font-heading)" }}>Users</h1>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New User

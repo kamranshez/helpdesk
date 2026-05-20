@@ -1,5 +1,6 @@
 {
   "enabledPlugins": {
-    "claude-notifications-go@claude-notifications-go": true
+    "claude-notifications-go@claude-notifications-go": true,
+    "frontend-design@claude-plugins-official": true
   }
 }

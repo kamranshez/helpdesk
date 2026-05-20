@@ -173,7 +173,7 @@ export default function TicketsPage() {
       <Navbar userName={session?.user.name ?? ""} />
       <div className="p-8 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Tickets</h1>
+          <h1 className="text-3xl font-normal text-foreground" style={{ fontFamily: "var(--font-heading)" }}>Tickets</h1>
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />

@@ -20,6 +20,7 @@
       "dependencies": {
         "@base-ui/react": "^1.4.1",
         "@fontsource-variable/geist": "^5.2.8",
+        "@fontsource/dm-serif-display": "^5.2.8",
         "@helpdesk/core": "workspace:*",
         "@hookform/resolvers": "^5.2.2",
         "@sentry/react": "^10.53.1",
@@ -288,6 +289,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@fontsource-variable/geist": ["@fontsource-variable/geist@5.2.8", "", {}, "sha512-cJ6m9e+8MQ5dCYJsLylfZrgBh6KkG4bOLckB35Tr9J/EqdkEM6QllH5PxqP1dhTvFup+HtMRPuz9xOjxXJggxw=="],
+
+    "@fontsource/dm-serif-display": ["@fontsource/dm-serif-display@5.2.8", "", {}, "sha512-GYSDSlGU6vyhv9a5MwaiVNf9HCuSVpK8hEFRyG4NNDHCDeHiX7YHDAcWsaoLKKcfXLgWG9YkBkk9T3SxM4rAjQ=="],
 
     "@helpdesk/core": ["@helpdesk/core@workspace:core"],
 

@@ -38,9 +38,9 @@ export default function TicketDetailPage() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Link
           to="/tickets"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
           Back to tickets
         </Link>
 

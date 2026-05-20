@@ -6,7 +6,6 @@ import UsersPage from "./pages/UsersPage";
 import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import DashboardPage from "./pages/DashboardPage";
-import Navbar from "./components/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -47,16 +46,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function Home() {
-  const { data: session } = authClient.useSession();
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar userName={session?.user.name ?? ""} />
-      <div className="p-8">
-        <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-      </div>
-    </div>
-  );
+  return <Navigate to="/dashboard" replace />;
 }
 
 type HealthData = {

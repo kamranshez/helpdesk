@@ -8,7 +8,7 @@ type Props = { ticket: TicketDetail };
 export default function TicketHeader({ ticket }: Props) {
   return (
     <CardHeader className="pb-4">
-      <CardTitle className="text-xl leading-snug">{ticket.subject}</CardTitle>
+      <CardTitle className="text-2xl font-normal leading-snug" style={{ fontFamily: "var(--font-heading)" }}>{ticket.subject}</CardTitle>
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <Badge variant={statusVariant(ticket.status)}>{STATUS_LABELS[ticket.status]}</Badge>
         {ticket.category && (
