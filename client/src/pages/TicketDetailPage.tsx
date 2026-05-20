@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, ChevronLeft } from "lucide-react";
 
+
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session } = authClient.useSession();

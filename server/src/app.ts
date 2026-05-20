@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -37,6 +38,8 @@ app.get("/api/health", async (_req, res) => {
   res.json({ status: "ok", database: "connected" });
 });
 
+
+
 // Unauthenticated webhook routes — must be before requireAuth
 app.use("/api/webhooks", webhooksRouter);
 
@@ -46,6 +49,8 @@ app.use("/api", requireAuth);
 app.use("/api/users", usersRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/stats", statsRouter);
+
+Sentry.setupExpressErrorHandler(app);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
