@@ -2,6 +2,7 @@ import type { Job } from "pg-boss";
 import boss from "../lib/boss.js";
 import { prisma } from "../lib/db.js";
 import { autoResolveTicket } from "../lib/ai.js";
+import { sendReplyEmail } from "../lib/email.js";
 import { TicketStatus, ReplySenderType } from "../../generated/prisma/enums.js";
 
 export const AUTO_RESOLVE_QUEUE = "auto-resolve-ticket";
@@ -44,6 +45,11 @@ export async function registerAutoResolveWorker() {
     const { resolved, reply } = await autoResolveTicket(subject, bodyText, fromName);
 
     if (resolved && reply) {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { fromEmail: true, fromName: true, subject: true },
+      });
+
       await prisma.$transaction([
         prisma.reply.create({
           data: {
@@ -58,6 +64,16 @@ export async function registerAutoResolveWorker() {
           data: { status: TicketStatus.resolved, resolvedByAI: true, resolvedAt: new Date() },
         }),
       ]);
+
+      if (ticket?.fromEmail) {
+        sendReplyEmail({
+          toEmail: ticket.fromEmail,
+          toName: ticket.fromName,
+          subject: ticket.subject,
+          body: reply,
+          agentName: "VoipOps Support",
+        }).catch((err) => console.error("[email] failed to send AI reply email:", err));
+      }
     } else {
       await prisma.ticket.update({
         where: { id: ticketId },

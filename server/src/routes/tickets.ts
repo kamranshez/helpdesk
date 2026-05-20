@@ -3,6 +3,7 @@ import { prisma } from "../lib/db.js";
 import { TicketStatus, TicketCategory, Role, ReplySenderType } from "../../generated/prisma/enums.js";
 import { updateTicketSchema, createReplySchema, polishReplySchema } from "@helpdesk/core";
 import { polishReply, summarizeTicket } from "../lib/ai.js";
+import { sendReplyEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -211,6 +212,16 @@ router.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json({ reply });
+
+  if (senderType === ReplySenderType.agent && ticket.fromEmail) {
+    sendReplyEmail({
+      toEmail: ticket.fromEmail,
+      toName: ticket.fromName,
+      subject: ticket.subject,
+      body: result.data.body,
+      agentName: reply.author.name,
+    }).catch((err) => console.error("[email] failed to send reply email:", err));
+  }
 });
 
 router.post("/:id/polish", async (req, res) => {
