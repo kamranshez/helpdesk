@@ -57,7 +57,7 @@ const AGENTS = [
   { id: "agent-2", name: "Carol Jones", email: "carol@example.com" },
 ];
 
-function mockGetSuccess(ticket: typeof TICKET_UNASSIGNED | typeof TICKET_ASSIGNED = TICKET_UNASSIGNED, agents = AGENTS) {
+function mockGetSuccess(ticket: typeof TICKET_UNASSIGNED | typeof TICKET_ASSIGNED | typeof TICKET_NO_NAME = TICKET_UNASSIGNED, agents = AGENTS) {
   mockedGet.mockImplementation((url: unknown) => {
     if (url === "/api/tickets/ticket-1") return Promise.resolve({ data: { ticket } });
     if (url === "/api/users/agents") return Promise.resolve({ data: { agents } });

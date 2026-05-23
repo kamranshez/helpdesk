@@ -11,6 +11,8 @@ import usersRouter from "./routes/users.js";
 import ticketsRouter from "./routes/tickets.js";
 import statsRouter from "./routes/stats.js";
 import webhooksRouter from "./routes/webhooks.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 
@@ -57,5 +59,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("[error]", err);
   res.status(500).json({ error: "Internal server error" });
 });
+
+// In production, serve the Vite client build and fall back to index.html for SPA routing
+if (process.env.NODE_ENV === "production") {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const clientDist = path.resolve(__dirname, "../../client/dist");
+  app.use(express.static(clientDist));
+  app.get("/{*any}", (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 export default app;

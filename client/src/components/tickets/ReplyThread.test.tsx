@@ -36,7 +36,7 @@ const CUSTOMER_REPLY = {
   createdAt: "2024-03-15T12:00:00Z",
 };
 
-function mockReplies(replies: typeof AGENT_REPLY[] = []) {
+function mockReplies(replies: (typeof AGENT_REPLY | typeof CUSTOMER_REPLY)[] = []) {
   mockedGet.mockResolvedValue({ data: { replies } });
 }
 
