@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { Role } from "../generated/prisma/index.js";
+import { Role } from "../generated/prisma/enums.js";
 import { prisma } from "../src/lib/db.js";
 
 const email = process.env.SEED_ADMIN_EMAIL!;
