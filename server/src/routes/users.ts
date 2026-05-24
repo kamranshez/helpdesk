@@ -5,12 +5,13 @@ import { requireAdmin } from "../middleware/auth.js";
 import { createUserSchema, updateUserSchema } from "@helpdesk/core";
 import { hashPassword } from "better-auth/crypto";
 import { randomUUID } from "crypto";
+import { AI_SYSTEM_USER_ID } from "../lib/constants.js";
 
 const router = Router();
 
 router.get("/agents", async (_req, res) => {
   const agents = await prisma.user.findMany({
-    where: { deletedAt: null, role: Role.agent },
+    where: { deletedAt: null, role: Role.agent, id: { not: AI_SYSTEM_USER_ID } },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });
@@ -19,7 +20,7 @@ router.get("/agents", async (_req, res) => {
 
 router.get("/", requireAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, id: { not: AI_SYSTEM_USER_ID } },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
