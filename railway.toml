@@ -3,7 +3,7 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 # Run pending migrations before starting the server
-startCommand = "cd /app/server && bunx prisma migrate deploy && bun /app/server/src/index.ts"
+startCommand = "sh -c 'cd /app/server && bunx prisma migrate deploy && bun /app/server/src/index.ts'"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
