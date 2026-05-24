@@ -4,10 +4,11 @@ import { prisma } from "../lib/db.js";
 import { autoResolveTicket } from "../lib/ai.js";
 import { sendReplyEmail } from "../lib/email.js";
 import { TicketStatus, ReplySenderType } from "../../generated/prisma/enums.js";
+import { AI_SYSTEM_USER_ID } from "../lib/constants.js";
 
 export const AUTO_RESOLVE_QUEUE = "auto-resolve-ticket";
 
-export const AI_SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
+export { AI_SYSTEM_USER_ID };
 
 export type AutoResolveJobData = {
   ticketId: string;
