@@ -17,7 +17,11 @@ import { fileURLToPath } from "url";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL ?? "http://localhost:5173", credentials: true }));
+const corsOrigins = [process.env.CLIENT_URL ?? "http://localhost:5173"];
+if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+  corsOrigins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+}
+app.use(cors({ origin: corsOrigins, credentials: true }));
 
 // Better Auth must be mounted before express.json()
 if (process.env.NODE_ENV === "production") {
