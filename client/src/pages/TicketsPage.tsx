@@ -87,6 +87,17 @@ const columns = [
       return <Badge variant={statusVariant(status)}>{STATUS_LABELS[status]}</Badge>;
     },
   }),
+  columnHelper.accessor("assignedTo", {
+    header: "Assigned",
+    cell: (info) => {
+      const agent = info.getValue() as Ticket["assignedTo"];
+      return agent ? (
+        <span className="text-foreground">{agent.name}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      );
+    },
+  }),
   columnHelper.accessor("createdAt", {
     header: "Received",
     cell: (info) => (
@@ -229,7 +240,7 @@ export default function TicketsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Subject", "From", "Category", "Status", "Received"].map((h) => (
+                    {["Subject", "From", "Category", "Status", "Assigned", "Received"].map((h) => (
                       <th
                         key={h}
                         className="text-left px-6 py-3 text-muted-foreground font-medium"
@@ -253,6 +264,9 @@ export default function TicketsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <Skeleton className="h-5 w-14 rounded-full" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-28" />
                       </td>
                       <td className="px-6 py-4">
                         <Skeleton className="h-4 w-24" />

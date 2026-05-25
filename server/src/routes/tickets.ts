@@ -62,6 +62,7 @@ router.get("/", async (req, res) => {
         status: true,
         category: true,
         createdAt: true,
+        assignedTo: { select: { id: true, name: true, email: true } },
       },
     }),
     prisma.ticket.count({ where }),
