@@ -11,6 +11,7 @@ export type Ticket = {
   status: TicketStatus;
   category: TicketCategory | null;
   createdAt: string;
+  assignedTo: { id: string; name: string; email: string } | null;
 };
 
 export type TicketDetail = Ticket & {
